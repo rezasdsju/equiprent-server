@@ -26,9 +26,16 @@ export async function connectToMongoDB() {
 }
 
 const mongoConnection = await connectToMongoDB()
+const database = mongoConnection.db('equiprent')
+const equipments = database.collection('equipments')
 
 app.listen(port, () => {
   console.log(`Example app listening on port ${port}`);
 });
+
+app.get('/all-equipments', async(req,res)=>{
+  const result = await equipments.find({}).toArray()
+  res.send(result)
+})
 
 export default app;

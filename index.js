@@ -11,7 +11,7 @@ app.get('/', (req, res) => {
 });
 
 
-import { MongoClient } from 'mongodb';
+import { MongoClient, ObjectId } from 'mongodb';
 
 const client = new MongoClient(process.env.MONGODB_URI);
 
@@ -75,5 +75,10 @@ app.get('/all-equipments', async (req, res) => {
   const result = await equipments.find(query).sort(sortOption).toArray()
   res.send(result)
 })
-
+app.get('/all-equipments/:id', async (req, res) => {
+  const id = req.params.id
+  const query = { _id: new ObjectId(id) }
+  const result = await equipments.findOne(query)
+  res.send(result)
+})
 export default app;

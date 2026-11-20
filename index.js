@@ -188,8 +188,13 @@ app.post('/add-equipment', verifyToken, verifyOwner, async (req, res) => {
     approvalStatus: 'pending',
     createdAt: new Date()
   }
-  const result = await equipments.insertOne(equipmentToInsert)
-  res.send(result)
+  try {
+    const result = await equipments.insertOne(equipmentToInsert)
+    res.status(201).send(result)
+  } catch (error) {
+    console.error('Add equipment error:', error)
+    res.status(500).send({ message: 'Failed to add equipment' })
+  }
 })
 
 

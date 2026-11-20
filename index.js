@@ -95,7 +95,7 @@ const verifyOwner = (req, res, next) => {
 
 app.get('/users', verifyToken, verifyAdmin, async (req, res) => {
   try {
-    const result = await users.find({}, { projection: { password: 0 } }).sort({ createdAt: -1 }).toArray()
+    const result = await users.find({}).sort({ createdAt: -1 }).toArray()
     res.send(result)
   } catch (error) {
     res.status(500).send({ message: 'Failed to get users' })

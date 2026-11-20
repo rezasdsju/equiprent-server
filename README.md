@@ -25,7 +25,7 @@ The backend API of **EquipRent**, an equipment rental marketplace where users ca
 - **Owner-Only Equipment Creation:** The add equipment route requires a valid session token and owner role, verified by `verifyToken` and `verifyOwner` middleware.
 - **Server-Controlled Equipment Data:** Automatically assigns owner information from the authenticated user and sets the initial approval status to `pending` on the backend.
 - **Owner-Only Equipment Updates:** Owners can update their own equipment through a protected route using `verifyToken` and `verifyOwner` middleware, with server-side field validation, ownership verification, and error handling.
-
+- **Owner-Only Equipment Deletion:** Allows authenticated owners to delete their own equipment using `verifyToken` and `verifyOwner` middleware, with ownership verification and error handling.
 
 
 ## Technologies
@@ -94,6 +94,7 @@ Follow these steps to run the server locally.
 |---|---|---|
 | GET | `/` | Returns a Hello World message |
 
+
 ### Equipment Routes
 
 | Method | Endpoint | Access | Description |
@@ -103,6 +104,7 @@ Follow these steps to run the server locally.
 | POST | `/add-equipment` | Private (Owner only) | Adds new equipment, assigns owner information from the authenticated user, and sets approval status to `pending` |
 | GET | `/my-equipments` | Private (Owner only) | Returns all equipment listed by the authenticated owner |
 | PATCH | `/my-equipments/:id` | Private (Owner only) | Updates an equipment item owned by the authenticated owner with server-side field validation and ownership verification |
+| DELETE | `/my-equipments/:id` | Private (Owner only) | Deletes an equipment item owned by the authenticated owner with ownership verification and error handling |
 
 
 ### Query Parameters

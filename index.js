@@ -198,7 +198,13 @@ app.post('/add-equipment', verifyToken, verifyOwner, async (req, res) => {
 })
 
 
-
+app.get('/my-equipments', verifyToken, verifyOwner, async (req, res) => {
+  const query = {
+    'owner._id': req.user._id
+  }
+  const result = await equipments.find(query).toArray()
+  res.send(result)
+})
 
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);

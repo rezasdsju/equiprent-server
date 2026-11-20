@@ -206,6 +206,22 @@ app.get('/my-equipments', verifyToken, verifyOwner, async (req, res) => {
   res.send(result)
 })
 
+
+app.patch('/my-equipments/:id', verifyToken, verifyOwner, async (req, res) => {
+  const id = req.params.id
+  const query = {
+    _id: new ObjectId(id),
+    'owner._id': req.user._id
+  }
+  const equipmentToUpdate = req.body
+  const result = await equipments.updateOne(query, {
+    $set: equipmentToUpdate
+  })
+  res.send(result)
+})
+
+
+
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });

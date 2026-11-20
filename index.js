@@ -248,6 +248,15 @@ app.patch('/my-equipments/:id', verifyToken, verifyOwner, async (req, res) => {
   }
 })
 
+app.delete('/my-equipments/:id', verifyToken, verifyOwner, async (req, res) => {
+  const id = req.params.id
+  const query = {
+    _id: new ObjectId(id),
+    'owner._id': req.user._id
+  }
+  const result = await equipments.deleteOne(query)
+  res.send(result)
+})
 
 
 app.listen(port, () => {

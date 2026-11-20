@@ -144,7 +144,15 @@ app.get('/all-equipments/:id', verifyToken, async (req, res) => {
 
 
 app.post('/add-equipment', verifyToken, verifyOwner, async (req, res) => {
-  const equipmentToInsert = req.body
+  const equipmentToInsert = {
+    ...req.body,
+    owner: {
+      name: req.user.name,
+      email: req.user.email
+    },
+    approvalStatus: 'pending',
+    createdAt: new Date()
+  }
   const result = await equipments.insertOne(equipmentToInsert)
   res.send(result)
 })

@@ -209,15 +209,43 @@ app.get('/my-equipments', verifyToken, verifyOwner, async (req, res) => {
 
 app.patch('/my-equipments/:id', verifyToken, verifyOwner, async (req, res) => {
   const id = req.params.id
-  const query = {
-    _id: new ObjectId(id),
-    'owner._id': req.user._id
+
+  const { name, description, category, location, rentalPrice, rentalType,
+    availableQuantity, condition, brand, model, image, rentalTerms } = req.body
+  if (
+    !name || !description || !category || !location || !rentalType ||
+    !condition || !brand || !model || !image || !rentalTerms ||
+    !Number.isFinite(rentalPrice) || rentalPrice <= 0 ||
+    !Number.isInteger(availableQuantity) || availableQuantity <= 0
+  ) {
+    return res.status(400).send({ message: 'Missing or invalid fields' })
   }
-  const equipmentToUpdate = req.body
-  const result = await equipments.updateOne(query, {
-    $set: equipmentToUpdate
-  })
-  res.send(result)
+
+  const validRentalTypes = ['Daily', 'Weekly', 'Monthly']
+  if (!validRentalTypes.includes(rentalType)) {
+    return res.status(400).send({ message: 'Invalid rental type' })
+  }
+  const equipmentToUpdate = {
+    name, description, category, location, rentalPrice, rentalType,
+    availableQuantity, condition, brand, model, image, rentalTerms,
+    updatedAt: new Date(),
+  }
+  try {
+    const query = {
+      _id: new ObjectId(id),
+      'owner._id': req.user._id
+    }
+    const result = await equipments.updateOne(query, {
+      $set: equipmentToUpdate
+    })
+    if (result.matchedCount === 0) {
+      return res.status(404).send({ message: 'Equipment not found or unauthorized' })
+    }
+    res.send(result)
+  } catch (error) {
+    console.error('Update error:', error)
+    res.status(500).send({ message: 'Failed to update equipment' })
+  }
 })
 
 

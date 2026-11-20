@@ -82,6 +82,15 @@ const verifyAdmin = (req, res, next) => {
   }
   next()
 }
+
+
+const verifyOwner = (req, res, next) => {
+  if (req.user?.role !== 'owner') {
+    res.status(403).send({ message: 'Forbidden access' })
+    return
+  }
+  next()
+}
 app.get('/all-equipments', async (req, res) => {
   // console.log('query: ', req.query)
   const { category, rentalType, availability, search, minPrice, maxPrice, sort = 'recent' } = req.query
@@ -133,6 +142,12 @@ app.get('/all-equipments/:id', verifyToken, async (req, res) => {
 })
 
 
+
+app.post('/add-equipment', verifyToken, verifyOwner, async (req, res) => {
+  const equipmentToInsert = req.body
+  const result = await equipments.insertOne(equipmentToInsert)
+  res.send(result)
+})
 
 
 

@@ -144,9 +144,44 @@ app.get('/all-equipments/:id', verifyToken, async (req, res) => {
 
 
 app.post('/add-equipment', verifyToken, verifyOwner, async (req, res) => {
+  const { name, description, category, location, rentalPrice, rentalType, availableQuantity, condition, brand, model, image, rentalTerms } = req.body
+
+  if (
+    !Number.isFinite(rentalPrice) ||
+    rentalPrice <= 0 ||
+    !Number.isInteger(availableQuantity) ||
+    availableQuantity <= 0
+  ) {
+    return res.status(400).send({
+      message: 'Invalid rental price or available quantity'
+    })
+  }
+  if (!name || !description || !category || !location || !rentalType || !condition || !brand || !model || !image || !rentalTerms) {
+    return res.status(400).send({
+      message: 'Please provide all required fields'
+    })
+  }
+  const validRentalTypes = ["Daily", "Weekly", "Monthly"]
+  if (!validRentalTypes.includes(rentalType)) {
+    return res.status(400).send({
+      message: 'Invalid rental type'
+    })
+  }
   const equipmentToInsert = {
-    ...req.body,
+    name,
+    description,
+    category,
+    location,
+    rentalPrice,
+    rentalType,
+    availableQuantity,
+    condition,
+    brand,
+    model,
+    image,
+    rentalTerms,
     owner: {
+      _id: req.user._id,
       name: req.user.name,
       email: req.user.email
     },

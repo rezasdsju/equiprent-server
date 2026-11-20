@@ -26,7 +26,7 @@ The backend API of **EquipRent**, an equipment rental marketplace where users ca
 - **Server-Controlled Equipment Data:** Automatically assigns owner information from the authenticated user and sets the initial approval status to `pending` on the backend.
 - **Owner-Only Equipment Updates:** Owners can update their own equipment through a protected route using `verifyToken` and `verifyOwner` middleware, with server-side field validation, ownership verification, and error handling.
 - **Owner-Only Equipment Deletion:** Allows authenticated owners to delete their own equipment using `verifyToken` and `verifyOwner` middleware, with ownership verification and error handling.
-- **Admin-Only User Retrieval:** Allows authenticated admins to retrieve all registered users, sorted by registration date, using `verifyToken` and `verifyAdmin` middleware.
+- **Admin User Role Management:** Allows authenticated admins to change user roles (Customer, Owner, and Admin) through a protected API using `verifyToken` and `verifyAdmin` middleware, with role validation and self-role modification prevention.
 
 ## Technologies
 
@@ -69,6 +69,7 @@ The backend API of **EquipRent**, an equipment rental marketplace where users ca
 | Method | Endpoint | Access | Description |
 |---|---|---|---|
 | GET | `/users` | Private (Admin only) | Retrieves all registered users, sorted by registration date (newest first) |
+| PATCH | `/users/:id` | Private (Admin only) | Updates a user's role with role validation and prevents admins from changing their own role |
 
 
 

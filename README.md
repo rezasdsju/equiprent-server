@@ -13,16 +13,15 @@ The backend API of **EquipRent**, an equipment rental marketplace where users ca
 ## Features
 
 - **MongoDB Integration:** Connects to MongoDB to retrieve equipment data.
-- **Approved Equipment:** Returns only equipment with approved status.
+- **Approved Equipment Only:** Public listing returns only equipment with approved status.
 - **Category Filtering:** Filter equipment by category.
-- **Rental Type Filtering:** Filter equipment by rental type.
+- **Rental Type Filtering:** Filter equipment by rental type (Hourly, Daily, Weekly, Monthly).
 - **Price Range Filtering:** Filter equipment using minimum and maximum rental prices.
 - **Availability Filtering:** Filter equipment by availability status.
 - **Search:** Search equipment by name or location (case-insensitive).
-- **Sorting:**
-  - Price: Low to High
-  - Price: High to Low
-  - Recently Added
+- **Sorting:** Price (low to high), price (high to low), and recently added.
+- **Protected Equipment Details:** The equipment details route requires a valid session token, verified by the `verifyToken` middleware.
+- **Role-Based Access:** `verifyAdmin` middleware restricts admin-only routes (403 for non-admins).
 
 ## Technologies
 

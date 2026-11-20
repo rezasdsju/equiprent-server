@@ -91,6 +91,17 @@ const verifyOwner = (req, res, next) => {
   }
   next()
 }
+
+
+app.get('/users', verifyToken, verifyAdmin, async (req, res) => {
+  try {
+    const result = await users.find({}, { projection: { password: 0 } }).sort({ createdAt: -1 }).toArray()
+    res.send(result)
+  } catch (error) {
+    res.status(500).send({ message: 'Failed to get users' })
+  }
+})
+
 app.get('/all-equipments', async (req, res) => {
   // console.log('query: ', req.query)
   const { category, rentalType, availability, search, minPrice, maxPrice, sort = 'recent' } = req.query

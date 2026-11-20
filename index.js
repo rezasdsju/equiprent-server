@@ -102,6 +102,35 @@ app.get('/users', verifyToken, verifyAdmin, async (req, res) => {
   }
 })
 
+
+app.patch('/users/:id', verifyToken, verifyAdmin, async (req, res) => {
+  const { role: newRole } = req.body
+  const allowedRoles = ['admin', 'customer', 'owner']
+  if (!allowedRoles.includes(newRole)) {
+    return res.status(400).send({ message: 'Invalid role' })
+  }
+  const id = req.params.id
+  if (!ObjectId.isValid(id)) {
+    return res.status(400).send({ message: 'Invalid user ID' })
+  }
+  const query = {
+    _id: new ObjectId(id)
+  }
+  try {
+    const result = await users.updateOne(query, {
+      $set: { role: newRole }
+    })
+    if (result.matchedCount === 0) {
+      return res.status(404).send({ message: 'User not found' })
+    }
+    res.send(result)
+  } catch (error) {
+    res.status(500).send({ message: 'Failed to update user role' })
+  }
+})
+
+
+
 app.get('/all-equipments', async (req, res) => {
   // console.log('query: ', req.query)
   const { category, rentalType, availability, search, minPrice, maxPrice, sort = 'recent' } = req.query

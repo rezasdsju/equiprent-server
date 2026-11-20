@@ -36,53 +36,6 @@ The backend API of **EquipRent**, an equipment rental marketplace where users ca
 - **dotenv:** Environment variable management
 - **CORS:** Cross-Origin Resource Sharing
 
-## Getting Started
-
-Follow these steps to run the server locally.
-
-### Prerequisites
-
-- Node.js
-- npm
-- MongoDB database
-- Nodemon
-
-### Installation
-
-1. Clone the repository:
-
-   ```bash
-   git clone https://github.com/rezasdsju/equiprent-server.git
-   ```
-
-2. Navigate to the project directory:
-
-   ```bash
-   cd equiprent-server
-   ```
-
-3. Install dependencies:
-
-   ```bash
-   npm install
-   ```
-
-4. Create a `.env` file in the root directory:
-
-   ```env
-   PORT=5000
-   MONGODB_URI=
-   ```
-
-   Add your MongoDB connection string to `MONGODB_URI`.
-
-5. Start the development server using Nodemon:
-
-   ```bash
-   nodemon index.js
-   ```
-
-   Replace `index.js` with your actual server entry filename if it is different.
 
 
 ## API Endpoints
@@ -144,6 +97,58 @@ Follow these steps to run the server locally.
 ```http
 GET /all-equipments?category=Electronics&minPrice=100&maxPrice=1000&sort=price-asc
 ```
+
+---
+
+
+## Getting Started
+
+Follow these steps to run the server locally.
+
+### Prerequisites
+
+- Node.js
+- npm
+- MongoDB database
+- Nodemon
+
+### Installation
+
+1. Clone the repository:
+
+   ```bash
+   git clone https://github.com/rezasdsju/equiprent-server.git
+   ```
+
+2. Navigate to the project directory:
+
+   ```bash
+   cd equiprent-server
+   ```
+
+3. Install dependencies:
+
+   ```bash
+   npm install
+   ```
+
+4. Create a `.env` file in the root directory:
+
+   ```env
+   PORT=5000
+   MONGODB_URI=
+   ```
+
+   Add your MongoDB connection string to `MONGODB_URI`.
+
+5. Start the development server using Nodemon:
+
+   ```bash
+   nodemon index.js
+   ```
+
+   Replace `index.js` with your actual server entry filename if it is different.
+
 
 ---
 

@@ -22,6 +22,8 @@ The backend API of **EquipRent**, an equipment rental marketplace where users ca
 - **Sorting:** Price (low to high), price (high to low), and recently added.
 - **Protected Equipment Details:** The equipment details route requires a valid session token, verified by the `verifyToken` middleware.
 - **Role-Based Access:** `verifyAdmin` middleware restricts admin-only routes (403 for non-admins).
+- **Owner-Only Equipment Creation:** The add equipment route requires a valid session token and owner role, verified by `verifyToken` and `verifyOwner` middleware.
+- **Server-Controlled Equipment Data:** Automatically assigns owner information from the authenticated user and sets the initial approval status to `pending` on the backend.
 
 ## Technologies
 
@@ -93,6 +95,8 @@ Follow these steps to run the server locally.
 |---|---|---|---|
 | GET | `/all-equipments` | Public | Returns approved equipment with optional filtering, searching, and sorting |
 | GET | `/all-equipments/:id` | Private (token required) | Returns details of a single equipment item |
+| POST | `/add-equipment` | Private (Owner only) | Adds new equipment, assigns owner information from the authenticated user, and sets approval status to `pending` |
+
 
 ### Query Parameters
 

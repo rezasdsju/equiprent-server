@@ -88,11 +88,12 @@ Follow these steps to run the server locally.
 |---|---|---|
 | GET | `/` | Returns a Hello World message |
 
-### Equipment Route
+### Equipment Routes
 
-| Method | Endpoint | Description |
-|---|---|---|
-| GET | `/all-equipments` | Returns approved equipment with optional filtering, searching, and sorting |
+| Method | Endpoint | Access | Description |
+|---|---|---|---|
+| GET | `/all-equipments` | Public | Returns approved equipment with optional filtering, searching, and sorting |
+| GET | `/all-equipments/:id` | Private (token required) | Returns details of a single equipment item |
 
 ### Query Parameters
 

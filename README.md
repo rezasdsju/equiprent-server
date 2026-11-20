@@ -26,7 +26,7 @@ The backend API of **EquipRent**, an equipment rental marketplace where users ca
 - **Server-Controlled Equipment Data:** Automatically assigns owner information from the authenticated user and sets the initial approval status to `pending` on the backend.
 - **Owner-Only Equipment Updates:** Owners can update their own equipment through a protected route using `verifyToken` and `verifyOwner` middleware, with server-side field validation, ownership verification, and error handling.
 - **Owner-Only Equipment Deletion:** Allows authenticated owners to delete their own equipment using `verifyToken` and `verifyOwner` middleware, with ownership verification and error handling.
-
+- **Admin-Only User Retrieval:** Allows authenticated admins to retrieve all registered users, sorted by registration date, using `verifyToken` and `verifyAdmin` middleware.
 
 ## Technologies
 
@@ -85,7 +85,6 @@ Follow these steps to run the server locally.
    Replace `index.js` with your actual server entry filename if it is different.
 
 
-
 ## API Endpoints
 
 ### Base Route
@@ -94,17 +93,30 @@ Follow these steps to run the server locally.
 |---|---|---|
 | GET | `/` | Returns a Hello World message |
 
-
-### Equipment Routes
+### Public Equipment Routes
 
 | Method | Endpoint | Access | Description |
 |---|---|---|---|
 | GET | `/all-equipments` | Public | Returns approved equipment with optional filtering, searching, and sorting |
 | GET | `/all-equipments/:id` | Private (Token required) | Returns details of a single equipment item |
+
+
+
+### Owner Routes
+
+| Method | Endpoint | Access | Description |
+|---|---|---|---|
 | POST | `/add-equipment` | Private (Owner only) | Adds new equipment, assigns owner information from the authenticated user, and sets approval status to `pending` |
 | GET | `/my-equipments` | Private (Owner only) | Returns all equipment listed by the authenticated owner |
 | PATCH | `/my-equipments/:id` | Private (Owner only) | Updates an equipment item owned by the authenticated owner with server-side field validation and ownership verification |
 | DELETE | `/my-equipments/:id` | Private (Owner only) | Deletes an equipment item owned by the authenticated owner with ownership verification and error handling |
+
+### Admin Routes
+
+| Method | Endpoint | Access | Description |
+|---|---|---|---|
+| GET | `/users` | Private (Admin only) | Retrieves all registered users, sorted by registration date (newest first) |
+
 
 
 ### Query Parameters

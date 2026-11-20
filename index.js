@@ -116,6 +116,9 @@ app.patch('/users/:id', verifyToken, verifyAdmin, async (req, res) => {
   const query = {
     _id: new ObjectId(id)
   }
+  if (req.user._id.toString() === id) {
+    return res.status(400).send({ message: 'You cannot change your own role' })
+  }
   try {
     const result = await users.updateOne(query, {
       $set: { role: newRole }

@@ -24,6 +24,9 @@ The backend API of **EquipRent**, an equipment rental marketplace where users ca
 - **Role-Based Access:** `verifyAdmin` middleware restricts admin-only routes (403 for non-admins).
 - **Owner-Only Equipment Creation:** The add equipment route requires a valid session token and owner role, verified by `verifyToken` and `verifyOwner` middleware.
 - **Server-Controlled Equipment Data:** Automatically assigns owner information from the authenticated user and sets the initial approval status to `pending` on the backend.
+- **Owner-Only Equipment Updates:** Owners can update their own equipment through a protected route using `verifyToken` and `verifyOwner` middleware, with server-side field validation, ownership verification, and error handling.
+
+
 
 ## Technologies
 
@@ -81,6 +84,8 @@ Follow these steps to run the server locally.
 
    Replace `index.js` with your actual server entry filename if it is different.
 
+
+
 ## API Endpoints
 
 ### Base Route
@@ -94,8 +99,10 @@ Follow these steps to run the server locally.
 | Method | Endpoint | Access | Description |
 |---|---|---|---|
 | GET | `/all-equipments` | Public | Returns approved equipment with optional filtering, searching, and sorting |
-| GET | `/all-equipments/:id` | Private (token required) | Returns details of a single equipment item |
+| GET | `/all-equipments/:id` | Private (Token required) | Returns details of a single equipment item |
 | POST | `/add-equipment` | Private (Owner only) | Adds new equipment, assigns owner information from the authenticated user, and sets approval status to `pending` |
+| GET | `/my-equipments` | Private (Owner only) | Returns all equipment listed by the authenticated owner |
+| PATCH | `/my-equipments/:id` | Private (Owner only) | Updates an equipment item owned by the authenticated owner with server-side field validation and ownership verification |
 
 
 ### Query Parameters

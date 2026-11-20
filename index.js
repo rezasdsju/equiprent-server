@@ -28,11 +28,60 @@ export async function connectToMongoDB() {
 const mongoConnection = await connectToMongoDB()
 const database = mongoConnection.db('equiprent')
 const equipments = database.collection('equipments')
+const sessions = database.collection('session')
+const users = database.collection('user')
 
-app.listen(port, () => {
-  console.log(`Example app listening on port ${port}`);
-});
 
+
+
+
+
+
+
+
+const verifyToken = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization
+    if (!authHeader) {
+      res.status(401).send({ message: 'Unauthorized access' })
+      return
+    }
+    const token = authHeader.split(' ')[1]
+    if (!token) {
+      res.status(401).send({ message: 'Unauthorized access' })
+      return
+    }
+    const query = { token }
+    const session = await sessions.findOne(query)
+    if (!session) {
+      res.status(401).send({ message: 'Unauthorized access' })
+      return
+    }
+    if (session.expiresAt && new Date(session.expiresAt) < new Date()) {
+      res.status(401).send({ message: 'Session expired' })
+      return
+    }
+    const userId = session.userId
+    const userQuery = { _id: new ObjectId(userId) }
+    const user = await users.findOne(userQuery)
+    if (!user) {
+      res.status(401).send({ message: 'Unauthorized access' })
+      return
+    }
+    req.user = user
+    next()
+  } catch (error) {
+    return res.status(401).send({ message: 'Unauthorized access' })
+  }
+}
+
+const verifyAdmin = (req, res, next) => {
+  if (req.user?.role !== 'admin') {
+    res.status(403).send({ message: 'Forbidden access' })
+    return
+  }
+  next()
+}
 app.get('/all-equipments', async (req, res) => {
   // console.log('query: ', req.query)
   const { category, rentalType, availability, search, minPrice, maxPrice, sort = 'recent' } = req.query
@@ -75,10 +124,21 @@ app.get('/all-equipments', async (req, res) => {
   const result = await equipments.find(query).sort(sortOption).toArray()
   res.send(result)
 })
-app.get('/all-equipments/:id', async (req, res) => {
+app.get('/all-equipments/:id', verifyToken, async (req, res) => {
+  // console.log('headers on the server: ',req.headers )
   const id = req.params.id
   const query = { _id: new ObjectId(id) }
   const result = await equipments.findOne(query)
   res.send(result)
 })
+
+
+
+
+
+
+app.listen(port, () => {
+  console.log(`Server is running on port ${port}`);
+});
+
 export default app;

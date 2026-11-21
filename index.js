@@ -33,6 +33,7 @@ const sessions = database.collection('session')
 const users = database.collection('user')
 const bookings = database.collection('bookings')
 const payments = database.collection('payments')
+const favourites = database.collection('favourites')
 
 
 
@@ -629,6 +630,41 @@ app.post('/customer/payments/checkout-verify', verifyToken, verifyCustomer, asyn
   }
 })
 
+
+
+app.post('/customer/favourites', verifyToken, verifyCustomer, async (req, res) => {
+  const { equipmentId } = req.body
+  if (!ObjectId.isValid(equipmentId)) {
+    return res.status(400).send({ message: 'Invalid equipment ID' })
+  }
+  const query = {
+    _id: new ObjectId(equipmentId),
+  }
+  try {
+    const favouriteEquipment = await equipments.findOne(query)
+    if (!favouriteEquipment) {
+      return res.status(404).send({ message: 'Equipment not found' })
+    }
+    const existingFavourite = await favourites.findOne({
+      customerId: req.user._id,
+      equipmentId: favouriteEquipment._id
+    })
+
+    if (existingFavourite) {
+      return res.status(409).send({ message: 'Already added to favourites' })
+    }
+    const favouriteToAdd = {
+      customerId: req.user._id,
+      equipmentId: favouriteEquipment._id,
+      createdAt: new Date()
+    }
+
+    const result = await favourites.insertOne(favouriteToAdd)
+   res.status(201).send(result)
+  } catch (error) {
+    res.status(500).send({ message: 'Failed to add favourite' })
+  }
+})
 
 
 app.listen(port, () => {

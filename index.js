@@ -198,7 +198,7 @@ app.get('/all-equipments/:id', verifyToken, async (req, res) => {
 
 
 
-app.post('/add-equipment', verifyToken, verifyOwner, async (req, res) => {
+app.post('/owner/add-equipment', verifyToken, verifyOwner, async (req, res) => {
   const { name, description, category, location, rentalPrice, rentalType, availableQuantity, condition, brand, model, image, rentalTerms } = req.body
 
   if (
@@ -253,7 +253,7 @@ app.post('/add-equipment', verifyToken, verifyOwner, async (req, res) => {
 })
 
 
-app.get('/my-equipments', verifyToken, verifyOwner, async (req, res) => {
+app.get('/owner/my-equipments', verifyToken, verifyOwner, async (req, res) => {
   const query = {
     'owner._id': req.user._id
   }
@@ -262,7 +262,7 @@ app.get('/my-equipments', verifyToken, verifyOwner, async (req, res) => {
 })
 
 
-app.patch('/my-equipments/:id', verifyToken, verifyOwner, async (req, res) => {
+app.patch('/owner/my-equipments/:id', verifyToken, verifyOwner, async (req, res) => {
   const id = req.params.id
 
   const { name, description, category, location, rentalPrice, rentalType,
@@ -303,7 +303,7 @@ app.patch('/my-equipments/:id', verifyToken, verifyOwner, async (req, res) => {
   }
 })
 
-app.delete('/my-equipments/:id', verifyToken, verifyOwner, async (req, res) => {
+app.delete('/owner/my-equipments/:id', verifyToken, verifyOwner, async (req, res) => {
   const id = req.params.id
 
   try {

@@ -93,6 +93,17 @@ const verifyOwner = (req, res, next) => {
 }
 
 
+
+app.get('/admin/all-equipment', verifyToken, verifyAdmin, async (req, res) => {
+  try {
+    const result = await equipments.find({}).sort({ createdAt: -1 }).toArray()
+    res.send(result)
+  } catch (error) {
+    res.status(500).send({ message: 'Failed to load equipments' })
+  }
+})
+
+
 app.get('/users', verifyToken, verifyAdmin, async (req, res) => {
   try {
     const result = await users.find({}).sort({ createdAt: -1 }).toArray()
@@ -131,6 +142,7 @@ app.patch('/users/:id', verifyToken, verifyAdmin, async (req, res) => {
     res.status(500).send({ message: 'Failed to update user role' })
   }
 })
+
 
 
 

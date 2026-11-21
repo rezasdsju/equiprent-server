@@ -103,6 +103,35 @@ app.get('/admin/all-equipment', verifyToken, verifyAdmin, async (req, res) => {
   }
 })
 
+app.patch('/admin/all-equipment/:id', verifyToken, verifyAdmin, async (req, res) => {
+  const id = req.params.id
+  if (!ObjectId.isValid(id)) {
+    return res.status(400).send({ message: 'Invalid Equipment ID' })
+  }
+  const query = {
+    _id: new ObjectId(id)
+  }
+  const allowedStatuses = ['pending', 'approved', 'rejected']
+  const { approvalStatus: newApprovalStatus } = req.body
+  if (!allowedStatuses.includes(newApprovalStatus)) {
+    return res.status(400).send({ message: 'Invalid approval status' })
+  }
+
+  try {
+    const result = await equipments.updateOne(query, {
+      $set: {
+        approvalStatus: newApprovalStatus
+      }
+    })
+    if (result.matchedCount === 0) {
+      return res.status(404).send({ message: 'Equipment not found' })
+    }
+    res.send(result)
+  } catch (error) {
+    console.error('Update approval status error:', error)
+    return res.status(500).send({ message: 'Failed to update approval status' })
+  }
+})
 
 app.get('/admin/users', verifyToken, verifyAdmin, async (req, res) => {
   try {

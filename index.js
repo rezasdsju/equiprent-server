@@ -454,11 +454,20 @@ app.post('/customer/bookings', verifyToken, verifyCustomer, async (req, res) => 
       message: `Only ${equipment.availableQuantity} available`,
     })
   }
+
   const start = new Date(startDate)
   const end = new Date(endDate)
   if (isNaN(start.getTime()) || isNaN(end.getTime()) || end < start) {
-    return res.status(400).send({ message: "Invalid rental dates" });
+    return res.status(400).send({ message: "Invalid rental dates" })
   }
+
+  const today = new Date()
+  today.setUTCHours(0, 0, 0, 0)
+  if (start < today) {
+    return res.status(400).send({ message: 'Start and End date cannot be in the past' })
+  }
+
+
   const totalDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1
   let rentalDuration;
   if (equipment.rentalType === "Daily") {
@@ -467,6 +476,9 @@ app.post('/customer/bookings', verifyToken, verifyCustomer, async (req, res) => 
     rentalDuration = Math.ceil(totalDays / 7)
   } else if (equipment.rentalType === "Monthly") {
     rentalDuration = Math.ceil(totalDays / 30)
+  }
+  if (!rentalDuration || rentalDuration < 1) {
+    return res.status(400).send({ message: 'Unsupported rental type' })
   }
   const equipmentForBooking = {
     equipmentId: equipment._id,
@@ -479,6 +491,7 @@ app.post('/customer/bookings', verifyToken, verifyCustomer, async (req, res) => 
     rentalType: equipment.rentalType,
     unitPrice: equipment.rentalPrice,
     rentalDuration: rentalDuration,
+    bookingDate: new Date(),
     totalAmount: equipment.rentalPrice * rentalDuration * quantity,
     paymentStatus: "unpaid",
     bookingStatus: "pending",

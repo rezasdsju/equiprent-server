@@ -523,6 +523,31 @@ app.post('/customer/bookings', verifyToken, verifyCustomer, async (req, res) => 
   }
 })
 
+
+app.get('/customer/bookings/:id', verifyToken, verifyCustomer, async (req, res) => {
+  const id = req.params.id
+  if (!ObjectId.isValid(id)) {
+    return res.status(400).send({ message: 'Invalid booking ID' })
+  }
+
+  const query = {
+    _id: new ObjectId(id),
+    'customer._id': req.user._id
+  }
+
+  try {
+    const result = await bookings.findOne(query)
+
+    if (!result) {
+      return res.status(404).send({ message: 'Booking not found' })
+    }
+
+    res.send(result)
+  } catch (error) {
+    console.error(error)
+    res.status(500).send({ message: 'Failed to get booking' })
+  }
+})
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });

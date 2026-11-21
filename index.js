@@ -1,11 +1,12 @@
 import express from 'express';
 import 'dotenv/config';
 import cors from 'cors'
+import Stripe from 'stripe'
 const app = express();
 app.use(cors())
 app.use(express.json())
 const port = process.env.PORT || 5000;
-
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
 app.get('/', (req, res) => {
   res.send('Hello World!');
 });
@@ -31,6 +32,7 @@ const equipments = database.collection('equipments')
 const sessions = database.collection('session')
 const users = database.collection('user')
 const bookings = database.collection('bookings')
+const payments = database.collection('payments')
 
 
 
@@ -424,8 +426,8 @@ app.delete('/owner/my-equipments/:id', verifyToken, verifyOwner, async (req, res
 })
 
 
-
-app.post('/customer/bookings', verifyToken, verifyCustomer, async (req, res) => {
+// Draft booking
+app.post('/customer/bookings/draft', verifyToken, verifyCustomer, async (req, res) => {
   const { equipmentId, startDate, endDate, requiredQuantity, contactNumber, deliveryAddress, additionalNotes } = req.body
   if (!startDate || !endDate || !requiredQuantity || !contactNumber || !deliveryAddress) {
     return res.status(400).send({ message: "Please provide all required booking information" });
@@ -523,8 +525,8 @@ app.post('/customer/bookings', verifyToken, verifyCustomer, async (req, res) => 
   }
 })
 
-
-app.get('/customer/bookings/:id', verifyToken, verifyCustomer, async (req, res) => {
+// Get draft booking
+app.get('/customer/bookings/draft/:id', verifyToken, verifyCustomer, async (req, res) => {
   const id = req.params.id
   if (!ObjectId.isValid(id)) {
     return res.status(400).send({ message: 'Invalid booking ID' })
@@ -548,6 +550,87 @@ app.get('/customer/bookings/:id', verifyToken, verifyCustomer, async (req, res) 
     res.status(500).send({ message: 'Failed to get booking' })
   }
 })
+
+
+
+
+
+
+app.post('/customer/payments/checkout-verify', verifyToken, verifyCustomer, async (req, res) => {
+  const { sessionId } = req.body
+
+  if (!sessionId) {
+    return res.status(400).send({ message: 'Session ID is required' })
+  }
+
+  try {
+    const {
+      status,
+      payment_status,
+      customer_email,
+      metadata,
+      payment_intent,
+      amount_total,
+      currency
+    } = await stripe.checkout.sessions.retrieve(sessionId)
+
+    if (status === 'complete' && payment_status === 'paid') {
+
+      const sessionQuery = { sessionId }
+      const existingPayments = await payments.findOne(sessionQuery)
+
+      if (existingPayments) {
+        return res.send({ message: 'Payment already verified' })
+      }
+
+      if (!metadata?.bookingId || !metadata?.userId) {
+        return res.status(400).send({ message: 'Invalid payment metadata' })
+      }
+
+      const query = {
+        _id: new ObjectId(metadata.bookingId),
+        'customer._id': new ObjectId(metadata.userId)
+      }
+
+      const booking = await bookings.findOne(query)
+
+      if (!booking || metadata.userId !== req.user._id.toString()) {
+        return res.status(403).send({ message: 'Unauthorized booking access' })
+      }
+      const payment = {
+        sessionId,
+        status,
+        payment_status,
+        customer_email,
+        userId: metadata.userId,
+        bookingId: metadata.bookingId,
+        payment_date: new Date(),
+        payment_intent,
+        amount: amount_total / 100,
+        currency
+      }
+
+      const result = await payments.insertOne(payment)
+
+      const updatedDoc = {
+        $set: {
+          paymentStatus: 'paid'
+        }
+      }
+
+      const updateResult = await bookings.updateOne(query, updatedDoc)
+
+      return res.send({ result, updateResult })
+    }
+
+    return res.status(400).send({ message: 'Payment not completed' })
+  } catch (error) {
+    return res.status(500).send({ message: 'Payment verification failed' })
+  }
+})
+
+
+
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });

@@ -103,7 +103,7 @@ app.get('/admin/all-equipment', verifyToken, verifyAdmin, async (req, res) => {
   }
 })
 
-app.patch('/admin/all-equipment/:id', verifyToken, verifyAdmin, async (req, res) => {
+app.patch('/admin/all-equipment/:id/approval', verifyToken, verifyAdmin, async (req, res) => {
   const id = req.params.id
   if (!ObjectId.isValid(id)) {
     return res.status(400).send({ message: 'Invalid Equipment ID' })
@@ -130,6 +130,48 @@ app.patch('/admin/all-equipment/:id', verifyToken, verifyAdmin, async (req, res)
   } catch (error) {
     console.error('Update approval status error:', error)
     return res.status(500).send({ message: 'Failed to update approval status' })
+  }
+})
+
+app.patch('/admin/all-equipment/:id', verifyToken, verifyAdmin, async (req, res) => {
+  const id = req.params.id
+  if (!ObjectId.isValid(id)) {
+    return res.status(400).send({ message: 'Invalid Equipment ID' })
+  }
+  const { name, description, category, location, rentalPrice, rentalType,
+    availableQuantity, condition, brand, model, image, rentalTerms } = req.body
+  if (
+    !name || !description || !category || !location || !rentalType ||
+    !condition || !brand || !model || !image || !rentalTerms ||
+    !Number.isFinite(rentalPrice) || rentalPrice <= 0 ||
+    !Number.isInteger(availableQuantity) || availableQuantity <= 0
+  ) {
+    return res.status(400).send({ message: 'Missing or invalid fields' })
+  }
+
+  const validRentalTypes = ['Daily', 'Weekly', 'Monthly']
+  if (!validRentalTypes.includes(rentalType)) {
+    return res.status(400).send({ message: 'Invalid rental type' })
+  }
+  const equipmentToUpdate = {
+    name, description, category, location, rentalPrice, rentalType,
+    availableQuantity, condition, brand, model, image, rentalTerms,
+    updatedAt: new Date(),
+  }
+  const query = {
+    _id: new ObjectId(id),
+  }
+  try {
+    const result = await equipments.updateOne(query, {
+      $set: equipmentToUpdate
+    })
+    if (result.matchedCount === 0) {
+      return res.status(404).send({ message: 'Equipment not found or unauthorized' })
+    }
+    res.send(result)
+  } catch (error) {
+    console.error('Update error:', error)
+    res.status(500).send({ message: 'Failed to update equipment' })
   }
 })
 

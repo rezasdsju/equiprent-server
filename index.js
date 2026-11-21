@@ -660,10 +660,23 @@ app.post('/customer/favourites', verifyToken, verifyCustomer, async (req, res) =
     }
 
     const result = await favourites.insertOne(favouriteToAdd)
-   res.status(201).send(result)
+    res.status(201).send(result)
   } catch (error) {
     res.status(500).send({ message: 'Failed to add favourite' })
   }
+})
+
+app.get('/customer/favourites/:id', verifyToken, verifyCustomer, async (req, res) => {
+  const id = req.params.id
+  if (!ObjectId.isValid(req.params.id)) {
+    return res.status(400).send({ message: 'Invalid equipment ID' })
+  }
+  const query = {
+    equipmentId: new ObjectId(id),
+    customerId: req.user._id
+  }
+  const result = await favourites.findOne(query)
+  res.send(result)
 })
 
 

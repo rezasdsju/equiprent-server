@@ -104,7 +104,7 @@ app.get('/admin/all-equipment', verifyToken, verifyAdmin, async (req, res) => {
 })
 
 
-app.get('/users', verifyToken, verifyAdmin, async (req, res) => {
+app.get('/admin/users', verifyToken, verifyAdmin, async (req, res) => {
   try {
     const result = await users.find({}).sort({ createdAt: -1 }).toArray()
     res.send(result)
@@ -114,7 +114,7 @@ app.get('/users', verifyToken, verifyAdmin, async (req, res) => {
 })
 
 
-app.patch('/users/:id', verifyToken, verifyAdmin, async (req, res) => {
+app.patch('/admin/users/:id', verifyToken, verifyAdmin, async (req, res) => {
   const { role: newRole } = req.body
   const allowedRoles = ['admin', 'customer', 'owner']
   if (!allowedRoles.includes(newRole)) {

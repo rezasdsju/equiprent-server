@@ -175,6 +175,28 @@ app.patch('/admin/all-equipment/:id', verifyToken, verifyAdmin, async (req, res)
   }
 })
 
+app.delete('/admin/all-equipment/:id', verifyToken, verifyAdmin, async (req, res) => {
+  const id = req.params.id
+  if (!ObjectId.isValid(id)) {
+    return res.status(400).send({ message: 'Invalid Equipment ID' })
+  }
+  const query = {
+    _id: new ObjectId(id)
+  }
+  try {
+    const result = await equipments.deleteOne(query)
+    if (result.deletedCount === 0) {
+      return res.status(404).send({ message: 'Equipment not found' })
+    }
+
+    return res.send(result)
+
+  } catch (error) {
+    console.log('Equipment Deletion Error:', error.message)
+    return res.status(500).send({ message: 'Failed to delete equipment' })
+  }
+})
+
 app.get('/admin/users', verifyToken, verifyAdmin, async (req, res) => {
   try {
     const result = await users.find({}).sort({ createdAt: -1 }).toArray()
@@ -183,7 +205,6 @@ app.get('/admin/users', verifyToken, verifyAdmin, async (req, res) => {
     res.status(500).send({ message: 'Failed to get users' })
   }
 })
-
 
 app.patch('/admin/users/:id', verifyToken, verifyAdmin, async (req, res) => {
   const { role: newRole } = req.body

@@ -30,7 +30,7 @@ const database = mongoConnection.db('equiprent')
 const equipments = database.collection('equipments')
 const sessions = database.collection('session')
 const users = database.collection('user')
-
+const bookings = database.collection('bookings')
 
 
 
@@ -86,6 +86,14 @@ const verifyAdmin = (req, res, next) => {
 
 const verifyOwner = (req, res, next) => {
   if (req.user?.role !== 'owner') {
+    res.status(403).send({ message: 'Forbidden access' })
+    return
+  }
+  next()
+}
+
+const verifyCustomer = (req, res, next) => {
+  if (req.user?.role !== 'customer') {
     res.status(403).send({ message: 'Forbidden access' })
     return
   }
@@ -415,6 +423,92 @@ app.delete('/owner/my-equipments/:id', verifyToken, verifyOwner, async (req, res
   }
 })
 
+
+
+app.post('/customer/bookings', verifyToken, verifyCustomer, async (req, res) => {
+  const { equipmentId, startDate, endDate, requiredQuantity, contactNumber, deliveryAddress, additionalNotes } = req.body
+  if (!startDate || !endDate || !requiredQuantity || !contactNumber || !deliveryAddress) {
+    return res.status(400).send({ message: "Please provide all required booking information" });
+  }
+  if (!ObjectId.isValid(equipmentId)) {
+    return res.status(400).send({ message: "Invalid equipment ID" });
+  }
+  const equipment = await equipments.findOne({ _id: new ObjectId(equipmentId) })
+  if (!equipment) {
+    return res.status(404).send({ message: 'Equipment not found' })
+  }
+  if (equipment.approvalStatus !== 'approved') {
+    return res.status(400).send({ message: 'Equipment not available for booking' })
+  }
+
+  if (equipment.owner._id.toString() === req.user._id.toString()) {
+    return res.status(400).send({ message: "You can't book your own equipment" })
+
+  }
+  const quantity = Number(requiredQuantity)
+  if (!Number.isInteger(quantity) || quantity < 1) {
+    return res.status(400).send({ message: 'Invalid quantity' })
+  }
+  if (quantity > equipment.availableQuantity) {
+    return res.status(400).send({
+      message: `Only ${equipment.availableQuantity} available`,
+    })
+  }
+  const start = new Date(startDate)
+  const end = new Date(endDate)
+  if (isNaN(start.getTime()) || isNaN(end.getTime()) || end < start) {
+    return res.status(400).send({ message: "Invalid rental dates" });
+  }
+  const totalDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1
+  let rentalDuration;
+  if (equipment.rentalType === "Daily") {
+    rentalDuration = totalDays
+  } else if (equipment.rentalType === "Weekly") {
+    rentalDuration = Math.ceil(totalDays / 7)
+  } else if (equipment.rentalType === "Monthly") {
+    rentalDuration = Math.ceil(totalDays / 30)
+  }
+  const equipmentForBooking = {
+    equipmentId: equipment._id,
+    equipmentName: equipment.name,
+    startDate, endDate,
+    requiredQuantity: quantity,
+    contactNumber, deliveryAddress,
+    additionalNotes: additionalNotes || '',
+    equipmentImage: equipment.image,
+    rentalType: equipment.rentalType,
+    unitPrice: equipment.rentalPrice,
+    rentalDuration: rentalDuration,
+    totalAmount: equipment.rentalPrice * rentalDuration * quantity,
+    paymentStatus: "unpaid",
+    bookingStatus: "pending",
+    customer: {
+      _id: req.user._id,
+      name: req.user.name,
+      email: req.user.email,
+    },
+    owner: {
+      _id: equipment.owner._id,
+      name: equipment.owner.name,
+      email: equipment.owner.email
+    }
+  }
+
+  try {
+    const result = await bookings.insertOne(equipmentForBooking)
+    if (result.acknowledged) {
+      return res.status(201).send({
+        message: "Booking created successfully",
+        insertedId: result.insertedId
+      });
+    }
+    return res.status(500).send({ message: "Failed to create booking" })
+
+  } catch (error) {
+    console.error(error);
+    return res.status(500).send({ message: "Failed to create booking" });
+  }
+})
 
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);

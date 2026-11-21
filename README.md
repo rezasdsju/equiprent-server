@@ -27,6 +27,9 @@ The backend API of **EquipRent**, an equipment rental marketplace where users ca
 - **Owner-Only Equipment Updates:** Owners can update their own equipment through a protected route using `verifyToken` and `verifyOwner` middleware, with server-side field validation, ownership verification, and error handling.
 - **Owner-Only Equipment Deletion:** Allows authenticated owners to delete their own equipment using `verifyToken` and `verifyOwner` middleware, with ownership verification and error handling.
 - **Admin User Role Management:** Allows authenticated admins to change user roles (Customer, Owner, and Admin) through a protected API using `verifyToken` and `verifyAdmin` middleware, with role validation and self-role modification prevention.
+- **Admin-Only Equipment Updates:** Allows authenticated admins to update any equipment through a protected API route using `verifyToken` and `verifyAdmin` middleware, with server-side field validation and error handling.
+- **Admin-Only Equipment Deletion:** Allows authenticated admins to delete any equipment through a protected API route using `verifyToken` and `verifyAdmin` middleware, with error handling.
+- **Admin Equipment Approval and Rejection:** Allows authenticated admins to approve or reject equipment submissions by updating their approval status through a protected API route using `verifyToken` and `verifyAdmin` middleware, with status validation.
 
 ## Technologies
 
@@ -35,6 +38,8 @@ The backend API of **EquipRent**, an equipment rental marketplace where users ca
 - **MongoDB:** NoSQL database
 - **dotenv:** Environment variable management
 - **CORS:** Cross-Origin Resource Sharing
+
+
 
 
 
@@ -53,25 +58,25 @@ The backend API of **EquipRent**, an equipment rental marketplace where users ca
 | GET | `/all-equipments` | Public | Returns approved equipment with optional filtering, searching, and sorting |
 | GET | `/all-equipments/:id` | Private (Token required) | Returns details of a single equipment item |
 
-
-
 ### Owner Routes
 
 | Method | Endpoint | Access | Description |
 |---|---|---|---|
-| POST | `/add-equipment` | Private (Owner only) | Adds new equipment, assigns owner information from the authenticated user, and sets approval status to `pending` |
-| GET | `/my-equipments` | Private (Owner only) | Returns all equipment listed by the authenticated owner |
-| PATCH | `/my-equipments/:id` | Private (Owner only) | Updates an equipment item owned by the authenticated owner with server-side field validation and ownership verification |
-| DELETE | `/my-equipments/:id` | Private (Owner only) | Deletes an equipment item owned by the authenticated owner with ownership verification and error handling |
+| POST | `/owner/add-equipment` | Private (Owner only) | Adds new equipment, assigns owner information from the authenticated user, and sets the initial approval status to `pending` |
+| GET | `/owner/my-equipments` | Private (Owner only) | Retrieves all equipment listed by the authenticated owner |
+| PATCH | `/owner/my-equipments/:id` | Private (Owner only) | Updates an equipment item owned by the authenticated owner with server-side field validation and ownership verification |
+| DELETE | `/owner/my-equipments/:id` | Private (Owner only) | Deletes an equipment item owned by the authenticated owner with ownership verification |
 
 ### Admin Routes
 
 | Method | Endpoint | Access | Description |
 |---|---|---|---|
-| GET | `/users` | Private (Admin only) | Retrieves all registered users, sorted by registration date (newest first) |
-| PATCH | `/users/:id` | Private (Admin only) | Updates a user's role with role validation and prevents admins from changing their own role |
-
-
+| GET | `/admin/all-equipment` | Private (Admin only) | Retrieves all equipment, sorted by creation date (newest first) |
+| PATCH | `/admin/all-equipment/:id/approval` | Private (Admin only) | Updates an equipment item's approval status (`pending`, `approved`, or `rejected`) with status validation |
+| PATCH | `/admin/all-equipment/:id` | Private (Admin only) | Updates equipment information with server-side field validation |
+| DELETE | `/admin/all-equipment/:id` | Private (Admin only) | Deletes any equipment item |
+| GET | `/admin/users` | Private (Admin only) | Retrieves all registered users, sorted by registration date (newest first) |
+| PATCH | `/admin/users/:id` | Private (Admin only) | Updates a user's role (`admin`, `customer`, or `owner`) with role validation and prevents admins from changing their own role |
 
 ### Query Parameters
 

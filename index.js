@@ -154,6 +154,18 @@ app.get('/all-equipments/:id', verifyToken, async (req, res) => {
   res.send(result)
 })
 
+app.get('/featured-equipments', async (req, res) => {
+  try {
+    const result = await equipments
+      .find({ approvalStatus: 'approved' })
+      .limit(6)
+      .toArray()
+
+    res.send(result)
+  } catch (error) {
+    res.status(500).send({ message: 'Failed to fetch featured equipment' })
+  }
+})
 
 app.get('/admin/all-equipment', verifyToken, verifyAdmin, async (req, res) => {
   try {

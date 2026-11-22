@@ -104,6 +104,56 @@ const verifyCustomer = (req, res, next) => {
 }
 
 
+app.get('/all-equipments', async (req, res) => {
+  // console.log('query: ', req.query)
+  const { category, rentalType, availability, search, minPrice, maxPrice, sort = 'recent' } = req.query
+  const query = {
+    approvalStatus: 'approved'
+  }
+  if (category && category !== 'all') {
+    query.category = category
+  }
+  if (rentalType && rentalType !== 'all') {
+    query.rentalType = rentalType
+  }
+  if (minPrice || maxPrice) {
+    query.rentalPrice = {}
+    if (minPrice) {
+      query.rentalPrice.$gte = Number(minPrice)
+    }
+    if (maxPrice) {
+      query.rentalPrice.$lte = Number(maxPrice)
+    }
+  }
+  if (search) {
+    query.$or = [
+      { name: { $regex: search, $options: "i" } },
+      { location: { $regex: search, $options: "i" } }
+    ]
+  }
+  if (availability && availability !== 'any') {
+    query.availability = availability
+  }
+  const sortOption = {}
+  if (sort === 'price-asc') {
+    sortOption.rentalPrice = 1
+  } else if (sort === 'price-desc') {
+    sortOption.rentalPrice = -1
+  } else if (sort === 'recent') {
+    sortOption.createdAt = -1
+  }
+
+  const result = await equipments.find(query).sort(sortOption).toArray()
+  res.send(result)
+})
+app.get('/all-equipments/:id', verifyToken, async (req, res) => {
+  // console.log('headers on the server: ',req.headers )
+  const id = req.params.id
+  const query = { _id: new ObjectId(id) }
+  const result = await equipments.findOne(query)
+  res.send(result)
+})
+
 
 app.get('/admin/all-equipment', verifyToken, verifyAdmin, async (req, res) => {
   try {
@@ -387,55 +437,6 @@ app.get('/admin/analytics/', verifyToken, verifyAdmin, async (req, res) => {
 })
 
 
-app.get('/all-equipments', async (req, res) => {
-  // console.log('query: ', req.query)
-  const { category, rentalType, availability, search, minPrice, maxPrice, sort = 'recent' } = req.query
-  const query = {
-    approvalStatus: 'approved'
-  }
-  if (category && category !== 'all') {
-    query.category = category
-  }
-  if (rentalType && rentalType !== 'all') {
-    query.rentalType = rentalType
-  }
-  if (minPrice || maxPrice) {
-    query.rentalPrice = {}
-    if (minPrice) {
-      query.rentalPrice.$gte = Number(minPrice)
-    }
-    if (maxPrice) {
-      query.rentalPrice.$lte = Number(maxPrice)
-    }
-  }
-  if (search) {
-    query.$or = [
-      { name: { $regex: search, $options: "i" } },
-      { location: { $regex: search, $options: "i" } }
-    ]
-  }
-  if (availability && availability !== 'any') {
-    query.availability = availability
-  }
-  const sortOption = {}
-  if (sort === 'price-asc') {
-    sortOption.rentalPrice = 1
-  } else if (sort === 'price-desc') {
-    sortOption.rentalPrice = -1
-  } else if (sort === 'recent') {
-    sortOption.createdAt = -1
-  }
-
-  const result = await equipments.find(query).sort(sortOption).toArray()
-  res.send(result)
-})
-app.get('/all-equipments/:id', verifyToken, async (req, res) => {
-  // console.log('headers on the server: ',req.headers )
-  const id = req.params.id
-  const query = { _id: new ObjectId(id) }
-  const result = await equipments.findOne(query)
-  res.send(result)
-})
 
 
 
@@ -576,6 +577,55 @@ app.get('/owner/my-equipments-rental', verifyToken, verifyOwner, async (req, res
   }
 })
 
+
+app.get('/owner/analytics', verifyToken, verifyOwner, async (req, res) => {
+  try {
+    const totalEquipments = await equipments.countDocuments({
+      'owner._id': req.user._id
+    })
+    const completedRentals = await bookings.countDocuments({
+      'owner._id': req.user._id,
+      bookingStatus: 'confirmed'
+    })
+    const earningResult = await payments.aggregate([
+      {
+        $match: {
+          'owner._id': req.user._id,
+          status: 'complete',
+          payment_status: 'paid'
+        }
+      }, {
+        $group: {
+          _id: '$owner._id',
+          total: { $sum: '$amount' }
+        }
+      }
+    ]).toArray()
+    const totalEarning = earningResult[0]?.total || 0
+
+    const monthlyEarning = await payments.aggregate([
+      {
+        $match: {
+          'owner._id': req.user._id,
+          status: 'complete',
+          payment_status: 'paid'
+        }
+      }, {
+        $group: {
+          _id: {
+            year: { $year: '$payment_date' },
+            month: { $month: '$payment_date' }
+          },
+          total: { $sum: '$amount' }
+        }
+      }
+    ]).toArray()
+    res.send({ totalEquipments, completedRentals, totalEarning, monthlyEarning })
+  } catch (error) {
+    console.error(error)
+    res.status(500).send({ message: 'Failed to fetch owner analytics' })
+  }
+})
 
 
 // Draft booking
@@ -751,6 +801,11 @@ app.post('/customer/payments/checkout-verify', verifyToken, verifyCustomer, asyn
       }
       const payment = {
         sessionId,
+        owner: {
+          _id: booking.owner._id,
+          name: booking.owner.name,
+          email: booking.owner.email
+        },
         status,
         payment_status,
         customer_email,

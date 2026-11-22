@@ -692,6 +692,23 @@ app.delete('/customer/favourites/:id', verifyToken, verifyCustomer, async (req, 
   res.send(result)
 })
 
+
+
+
+app.get('/customer/rental', verifyToken, verifyCustomer, async (req, res) => {
+  const query = {
+    'customer._id': req.user._id
+  }
+
+  try {
+    const result = await bookings.find(query).sort({ bookingDate: -1 }).toArray()
+    res.send(result)
+  } catch (error) {
+    res.status(500).send({ message: 'Failed to fetch rental bookings' })
+  }
+})
+
+
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });

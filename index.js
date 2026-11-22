@@ -280,6 +280,53 @@ app.delete('/admin/users/:id', verifyToken, verifyAdmin, async (req, res) => {
   }
 })
 
+app.get('/admin/rentals', verifyToken, verifyAdmin, async (req, res) => {
+  try {
+    const result = await bookings
+      .find({})
+      .sort({ bookingDate: -1 })
+      .toArray()
+
+    res.send(result)
+  } catch (error) {
+    res.status(500).send({ message: 'Failed to fetch rental bookings' })
+  }
+})
+
+
+app.patch('/admin/rentals/:id', verifyToken, verifyAdmin, async (req, res) => {
+  const id = req.params.id
+  const { bookingStatus } = req.body
+
+  try {
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).send({ message: 'Invalid booking ID' })
+    }
+
+    const query = {
+      _id: new ObjectId(id)
+    }
+
+    const booking = await bookings.findOne(query)
+
+    if (!booking) {
+      return res.status(404).send({ message: 'Booking not found' })
+    }
+
+    const updatedDoc = {
+      $set: {
+        bookingStatus: bookingStatus
+      }
+    }
+
+    const result = await bookings.updateOne(query, updatedDoc)
+
+    res.send({ message: 'Booking status updated successfully' })
+  } catch (error) {
+    res.status(500).send({ message: 'Failed to update booking status' })
+  }
+})
+
 
 app.get('/all-equipments', async (req, res) => {
   // console.log('query: ', req.query)

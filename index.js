@@ -676,9 +676,21 @@ app.get('/customer/favourites/:id', verifyToken, verifyCustomer, async (req, res
     customerId: req.user._id
   }
   const result = await favourites.findOne(query)
-  res.send(result)
+  res.json(result)
 })
 
+app.delete('/customer/favourites/:id', verifyToken, verifyCustomer, async (req, res) => {
+  const id = req.params.id
+  if (!ObjectId.isValid(req.params.id)) {
+    return res.status(400).send({ message: 'Invalid equipment ID' })
+  }
+  const query = {
+    equipmentId: new ObjectId(id),
+    customerId: req.user._id
+  }
+  const result = await favourites.deleteOne(query)
+  res.send(result)
+})
 
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);

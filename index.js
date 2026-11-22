@@ -426,6 +426,19 @@ app.delete('/owner/my-equipments/:id', verifyToken, verifyOwner, async (req, res
   }
 })
 
+app.get('/owner/my-equipments-rental', verifyToken, verifyOwner, async (req, res) => {
+  try {
+    const query = {
+      'owner._id': req.user._id
+    }
+    const result = await bookings.find(query).sort({ bookingDate: -1 }).toArray()
+    res.send(result)
+  } catch (error) {
+    res.status(500).send({ message: 'Failed to fetch owner equipments' })
+  }
+})
+
+
 
 // Draft booking
 app.post('/customer/bookings/draft', verifyToken, verifyCustomer, async (req, res) => {
@@ -615,7 +628,8 @@ app.post('/customer/payments/checkout-verify', verifyToken, verifyCustomer, asyn
 
       const updatedDoc = {
         $set: {
-          paymentStatus: 'paid'
+          paymentStatus: 'paid',
+          bookingStatus: 'confirmed'
         }
       }
 

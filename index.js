@@ -246,7 +246,39 @@ app.patch('/admin/users/:id', verifyToken, verifyAdmin, async (req, res) => {
   }
 })
 
+app.delete('/admin/users/:id', verifyToken, verifyAdmin, async (req, res) => {
+  const id = req.params.id
 
+  try {
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).send({ message: 'Invalid user ID' })
+    }
+
+    const query = {
+      _id: new ObjectId(id),
+      role: { $ne: 'admin' }
+    }
+    const user = await users.findOne({ _id: new ObjectId(id) })
+
+    if (!user) {
+      return res.status(404).send({ message: 'User not found' })
+    }
+
+    if (user.role === 'admin') {
+      return res.status(403).send({ message: 'Admin account cannot be deleted' })
+    }
+
+    const result = await users.deleteOne(query)
+
+    if (result.deletedCount === 0) {
+      return res.status(404).send({ message: 'User not found or cannot be deleted' })
+    }
+
+    res.send({ message: 'User deleted successfully' })
+  } catch (error) {
+    res.status(500).send({ message: 'Failed to delete user' })
+  }
+})
 
 
 app.get('/all-equipments', async (req, res) => {

@@ -1,161 +1,254 @@
-# EquipRent Server: The Engine Behind the Rentals
+# EquipRent Server
 
-The backend API of **EquipRent**, an equipment rental marketplace where users can explore available equipment. The server provides equipment data with filtering, searching, and sorting capabilities.
+<div align="center">
 
-> This repository contains the **backend** of the EquipRent project. The frontend lives in a separate repository.
+### Backend API for a multi-role equipment rental marketplace
 
-## Links
+**Browse equipment · Manage listings · Create bookings · Process payments · Analyse platform activity**
 
-- 🌐 **Live API:** [EquipRent Server](https://equiprent-server-rk.vercel.app/)
-- 💻 **Frontend Repository:** [equiprent-client](https://github.com/rezasdsju/equiprent-client)
-- 🔗 **Live Site:** [EquipRent Client](https://equiprent-client-rk.vercel.app/)
+[Live API](https://equiprent-server-rk.vercel.app/) · [Live Application](https://equiprent-client-rk.vercel.app/) · [Frontend Repository](https://github.com/rezasdsju/equiprent-client)
 
-## Features
+</div>
 
-- **MongoDB Integration:** Connects to MongoDB to retrieve equipment data.
-- **Approved Equipment Only:** Public listing returns only equipment with approved status.
-- **Category Filtering:** Filter equipment by category.
-- **Rental Type Filtering:** Filter equipment by rental type (Hourly, Daily, Weekly, Monthly).
-- **Price Range Filtering:** Filter equipment using minimum and maximum rental prices.
-- **Availability Filtering:** Filter equipment by availability status.
-- **Search:** Search equipment by name or location (case-insensitive).
-- **Sorting:** Price (low to high), price (high to low), and recently added.
-- **Protected Equipment Details:** The equipment details route requires a valid session token, verified by the `verifyToken` middleware.
-- **Role-Based Access:** `verifyAdmin` middleware restricts admin-only routes (403 for non-admins).
-- **Owner-Only Equipment Creation:** The add equipment route requires a valid session token and owner role, verified by `verifyToken` and `verifyOwner` middleware.
-- **Server-Controlled Equipment Data:** Automatically assigns owner information from the authenticated user and sets the initial approval status to `pending` on the backend.
-- **Owner-Only Equipment Updates:** Owners can update their own equipment through a protected route using `verifyToken` and `verifyOwner` middleware, with server-side field validation, ownership verification, and error handling.
-- **Owner-Only Equipment Deletion:** Allows authenticated owners to delete their own equipment using `verifyToken` and `verifyOwner` middleware, with ownership verification and error handling.
-- **Admin User Role Management:** Allows authenticated admins to change user roles (Customer, Owner, and Admin) through a protected API using `verifyToken` and `verifyAdmin` middleware, with role validation and self-role modification prevention.
-- **Admin-Only Equipment Updates:** Allows authenticated admins to update any equipment through a protected API route using `verifyToken` and `verifyAdmin` middleware, with server-side field validation and error handling.
-- **Admin-Only Equipment Deletion:** Allows authenticated admins to delete any equipment through a protected API route using `verifyToken` and `verifyAdmin` middleware, with error handling.
-- **Admin Equipment Approval and Rejection:** Allows authenticated admins to approve or reject equipment submissions by updating their approval status through a protected API route using `verifyToken` and `verifyAdmin` middleware, with status validation.
+---
 
-## Technologies
+## About the Project
 
-- **Node.js:** JavaScript runtime environment
-- **Express.js:** Backend web framework
-- **MongoDB:** NoSQL database
-- **dotenv:** Environment variable management
-- **CORS:** Cross-Origin Resource Sharing
+**EquipRent** is an equipment rental platform that connects customers with equipment owners.
+This repository contains the server-side application responsible for equipment discovery, role-based access control, bookings, favourites, Stripe payment verification, and platform analytics.
 
+The API uses MongoDB for persistent data and session-based authentication for protected routes.
 
+## Key Capabilities
 
+### Public and Discovery
 
+- Approved-equipment marketplace listing
+- Category, rental type, availability, and price-range filtering
+- Case-insensitive search across equipment names and locations
+- Price and newest-first sorting
+- Featured and recently added equipment endpoints
 
-## API Endpoints
+### Authentication and Authorization
 
-### Base Route
+- Session token verification through MongoDB
+- Session expiration checks
+- Admin, owner, and customer middleware
+- Protected equipment, booking, payment, favourite, and analytics routes
 
-| Method | Endpoint | Description |
-|---|---|---|
-| GET | `/` | Returns a Hello World message |
+### Customer Features
 
-### Public Equipment Routes
+- Create validated rental booking drafts
+- Retrieve draft bookings owned by the authenticated customer
+- Verify completed Stripe checkout sessions
+- Convert confirmed payments into paid/confirmed bookings
+- Reduce available equipment quantity after successful payment verification
+- Add, check, list, and remove favourite equipment
+- View the customer's rental history
+
+### Owner Features
+
+- Add equipment with server-assigned owner details
+- Start submitted equipment in `pending` approval status
+- View, update, and delete owned equipment
+- View bookings for the owner's equipment
+- View owner analytics and monthly earnings
+
+### Admin Features
+
+- View every equipment listing regardless of approval status
+- Approve, reject, or reset equipment approval status
+- Update or delete equipment
+- View all users and update customer, owner, or admin roles
+- Delete non-admin users
+- View and update rental bookings
+- View platform-wide analytics
+
+## Technology Stack
+
+| Technology | Purpose |
+|---|---|
+| Node.js | JavaScript server runtime |
+| Express 5 | REST API framework |
+| MongoDB | Equipment, session, user, booking, payment, and favourite storage |
+| MongoDB Driver | Database queries and aggregation |
+| Stripe SDK | Checkout session and payment verification |
+| dotenv | Environment configuration |
+| CORS | Cross-origin API access |
+| Nodemon | Development-time server restarts |
+
+## MongoDB Collections
+
+The API uses the `equiprent` database and these collections:
+
+- `equipments`
+- `session`
+- `user`
+- `bookings`
+- `payments`
+- `favourites`
+
+## Authorization Model
+
+Protected routes expect a session token in the request header:
+
+```http
+Authorization: Bearer <session-token>
+```
+
+The `verifyToken` middleware:
+
+1. Reads the bearer token.
+2. Finds the matching session in MongoDB.
+3. Rejects expired sessions.
+4. Loads the associated user.
+5. Attaches the user to `req.user`.
+
+The `verifyAdmin`, `verifyOwner`, and `verifyCustomer` middleware then enforce the required role.
+
+## API Reference
+
+### General
 
 | Method | Endpoint | Access | Description |
 |---|---|---|---|
-| GET | `/all-equipments` | Public | Returns approved equipment with optional filtering, searching, and sorting |
-| GET | `/all-equipments/:id` | Private (Token required) | Returns details of a single equipment item |
+| `GET` | `/` | Public | Health/root response |
 
-### Owner Routes
-
-| Method | Endpoint | Access | Description |
-|---|---|---|---|
-| POST | `/owner/add-equipment` | Private (Owner only) | Adds new equipment, assigns owner information from the authenticated user, and sets the initial approval status to `pending` |
-| GET | `/owner/my-equipments` | Private (Owner only) | Retrieves all equipment listed by the authenticated owner |
-| PATCH | `/owner/my-equipments/:id` | Private (Owner only) | Updates an equipment item owned by the authenticated owner with server-side field validation and ownership verification |
-| DELETE | `/owner/my-equipments/:id` | Private (Owner only) | Deletes an equipment item owned by the authenticated owner with ownership verification |
-
-### Admin Routes
+### Equipment Discovery
 
 | Method | Endpoint | Access | Description |
 |---|---|---|---|
-| GET | `/admin/all-equipment` | Private (Admin only) | Retrieves all equipment, sorted by creation date (newest first) |
-| PATCH | `/admin/all-equipment/:id/approval` | Private (Admin only) | Updates an equipment item's approval status (`pending`, `approved`, or `rejected`) with status validation |
-| PATCH | `/admin/all-equipment/:id` | Private (Admin only) | Updates equipment information with server-side field validation |
-| DELETE | `/admin/all-equipment/:id` | Private (Admin only) | Deletes any equipment item |
-| GET | `/admin/users` | Private (Admin only) | Retrieves all registered users, sorted by registration date (newest first) |
-| PATCH | `/admin/users/:id` | Private (Admin only) | Updates a user's role (`admin`, `customer`, or `owner`) with role validation and prevents admins from changing their own role |
+| `GET` | `/all-equipments` | Public | Approved equipment with filters, search, and sorting |
+| `GET` | `/all-equipments/:id` | Authenticated | Equipment details |
+| `GET` | `/featured-equipments` | Public | Up to 6 approved equipment items |
+| `GET` | `/recently-added-equipments` | Public | Up to 4 approved items sorted newest first |
 
-### Query Parameters
+### Owner
+
+| Method | Endpoint | Access | Description |
+|---|---|---|---|
+| `POST` | `/owner/add-equipment` | Owner | Add equipment; assign owner data and set `pending` approval |
+| `GET` | `/owner/my-equipments` | Owner | List the owner's equipment |
+| `PATCH` | `/owner/my-equipments/:id` | Owner | Update owned equipment |
+| `DELETE` | `/owner/my-equipments/:id` | Owner | Delete owned equipment |
+| `GET` | `/owner/my-equipments-rental` | Owner | List bookings for the owner's equipment |
+| `GET` | `/owner/analytics` | Owner | Equipment, rental, earnings, and monthly earnings data |
+
+### Admin
+
+| Method | Endpoint | Access | Description |
+|---|---|---|---|
+| `GET` | `/admin/all-equipment` | Admin | All equipment, newest first |
+| `PATCH` | `/admin/all-equipment/:id/approval` | Admin | Set approval to `pending`, `approved`, or `rejected` |
+| `PATCH` | `/admin/all-equipment/:id` | Admin | Update equipment fields |
+| `DELETE` | `/admin/all-equipment/:id` | Admin | Delete equipment |
+| `GET` | `/admin/users` | Admin | All users, newest first |
+| `PATCH` | `/admin/users/:id` | Admin | Change a user's role |
+| `DELETE` | `/admin/users/:id` | Admin | Delete a non-admin user |
+| `GET` | `/admin/rentals` | Admin | All rental bookings, newest first |
+| `PATCH` | `/admin/rentals/:id` | Admin | Update booking status |
+| `GET` | `/admin/analytics` | Admin | Platform users, equipment, bookings, revenue, and monthly bookings |
+
+### Customer
+
+| Method | Endpoint | Access | Description |
+|---|---|---|---|
+| `POST` | `/customer/bookings/draft` | Customer | Create a draft rental booking |
+| `GET` | `/customer/bookings/draft/:id` | Customer | Retrieve the customer's draft booking |
+| `POST` | `/customer/payments/checkout-verify` | Customer | Verify a Stripe checkout session |
+| `POST` | `/customer/favourites` | Customer | Add equipment to favourites |
+| `GET` | `/customer/favourites/:id` | Customer | Check whether equipment is a favourite |
+| `DELETE` | `/customer/favourites/:id` | Customer | Remove equipment from favourites |
+| `GET` | `/customer/favourites` | Customer | List favourite equipment |
+| `GET` | `/customer/rental` | Customer | List the customer's rentals |
+
+## Query Options
+
+The `/all-equipments` endpoint supports:
 
 | Parameter | Description | Example |
 |---|---|---|
-| `category` | Filter by equipment category | `category=Electronics` |
-| `rentalType` | Filter by rental type | `rentalType=Daily` |
+| `category` | Filter by category | `category=Electronics` |
+| `rentalType` | Filter by `Daily`, `Weekly`, or `Monthly` | `rentalType=Daily` |
 | `availability` | Filter by availability | `availability=Available` |
 | `minPrice` | Minimum rental price | `minPrice=100` |
 | `maxPrice` | Maximum rental price | `maxPrice=1000` |
-| `search` | Search by equipment name or location | `search=Dhaka` |
-| `sort` | Sort equipment by price or creation date | `sort=price-asc` |
+| `search` | Search equipment name or location | `search=Dhaka` |
+| `sort` | Choose `price-asc`, `price-desc`, or `recent` | `sort=price-asc` |
 
-### Sorting Options
-
-| Value | Description |
-|---|---|
-| `price-asc` | Price: Low to High |
-| `price-desc` | Price: High to Low |
-| `recent` | Recently Added (default) |
-
-### Example Request
+Example:
 
 ```http
 GET /all-equipments?category=Electronics&minPrice=100&maxPrice=1000&sort=price-asc
 ```
 
----
+## Booking Calculation
 
+A draft booking validates its rental dates and required quantity, then calculates the rental duration from the equipment rental type:
 
-## Getting Started
+- **Daily:** number of booked days
+- **Weekly:** booked days divided into 7-day periods
+- **Monthly:** booked days divided into 30-day periods
 
-Follow these steps to run the server locally.
+The total booking amount is calculated as:
+
+```text
+rental price x rental duration x required quantity
+```
+
+After verified payment, the API marks the payment and booking as paid/confirmed and decreases the equipment's available quantity.
+
+## Local Setup
 
 ### Prerequisites
 
 - Node.js
 - npm
 - MongoDB database
-- Nodemon
+- Stripe account for payment verification
 
 ### Installation
 
-1. Clone the repository:
+```bash
+git clone https://github.com/rezasdsju/equiprent-server.git
+cd equiprent-server
+npm install
+```
 
-   ```bash
-   git clone https://github.com/rezasdsju/equiprent-server.git
-   ```
+Create a `.env` file in the repository root:
 
-2. Navigate to the project directory:
+```env
+PORT=5000
+MONGODB_URI=<your-mongodb-uri>
+STRIPE_SECRET_KEY=<your-stripe-secret-key>
+```
 
-   ```bash
-   cd equiprent-server
-   ```
+Start the development server:
 
-3. Install dependencies:
+```bash
+npx nodemon index.js
+```
 
-   ```bash
-   npm install
-   ```
+The server uses `PORT` from the environment and defaults to port `5000`.
 
-4. Create a `.env` file in the root directory:
+## Project Structure
 
-   ```env
-   PORT=5000
-   MONGODB_URI=
-   ```
+```text
+equiprent-server/
+├── index.js       # API routes, middleware, database setup, and Stripe integration
+├── package.json   # Dependencies and project metadata
+├── package-lock.json
+└── README.md
+```
 
-   Add your MongoDB connection string to `MONGODB_URI`.
+## Related Repository
 
-5. Start the development server using Nodemon:
-
-   ```bash
-   nodemon index.js
-   ```
-
-   Replace `index.js` with your actual server entry filename if it is different.
-
+- [EquipRent Frontend](https://github.com/rezasdsju/equiprent-client)
+- [Live Application](https://equiprent-client-rk.vercel.app/)
+- [Live API](https://equiprent-server-rk.vercel.app/)
 
 ---
 
-Built with Node.js, Express.js, and MongoDB.
+<div align="center">
+Built with Node.js, Express, MongoDB, and Stripe
+</div>

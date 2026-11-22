@@ -694,16 +694,35 @@ app.delete('/customer/favourites/:id', verifyToken, verifyCustomer, async (req, 
 
 app.get('/customer/favourites', verifyToken, verifyCustomer, async (req, res) => {
   try {
-    const query = {
-      customerId: req.user._id
-    }
-    const result = await favourites.find(query).sort({ createdAt: -1 }).toArray()
+    const result = await favourites.aggregate([
+      {
+        $match: {
+          customerId: req.user._id
+        }
+      },
+      {
+        $lookup: {
+          from: 'equipments',
+          localField: 'equipmentId',
+          foreignField: '_id',
+          as: 'equipment'
+        }
+      },
+      {
+        $unwind: '$equipment'
+      },
+      {
+        $sort: {
+          createdAt: -1
+        }
+      }
+    ]).toArray()
+
     res.send(result)
   } catch (error) {
     res.status(500).send({ message: 'Failed to fetch favourites' })
   }
 })
-
 
 app.get('/customer/rental', verifyToken, verifyCustomer, async (req, res) => {
   const query = {

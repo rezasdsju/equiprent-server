@@ -167,6 +167,20 @@ app.get('/featured-equipments', async (req, res) => {
   }
 })
 
+app.get('/recently-added-equipments', async (req, res) => {
+  try {
+    const result = await equipments
+      .find({ approvalStatus: 'approved' })
+      .sort({ createdAt: -1 })
+      .limit(4)
+      .toArray()
+
+    res.send(result)
+  } catch (error) {
+    res.status(500).send({ message: 'Failed to fetch recently added equipment' })
+  }
+})
+
 app.get('/admin/all-equipment', verifyToken, verifyAdmin, async (req, res) => {
   try {
     const result = await equipments.find({}).sort({ createdAt: -1 }).toArray()

@@ -328,6 +328,65 @@ app.patch('/admin/rentals/:id', verifyToken, verifyAdmin, async (req, res) => {
 })
 
 
+
+app.get('/admin/analytics/', verifyToken, verifyAdmin, async (req, res) => {
+  try {
+    const totalUsers = await users.countDocuments()
+    const totalEquipments = await equipments.countDocuments()
+    const totalBookings = await bookings.countDocuments()
+    const pendingCount = await equipments.countDocuments({
+      approvalStatus: 'pending'
+    })
+    const completeRentals = await bookings.countDocuments({
+      bookingStatus: 'completed'
+    })
+    const revenueResult = await payments.aggregate([
+      {
+        $match: {
+          status: 'complete',
+          payment_status: 'paid'
+        }
+      }, {
+        $group: {
+          _id: null,
+          totalRevenue: { $sum: '$amount' }
+        }
+      }
+    ]).toArray()
+    const totalRevenue = revenueResult[0]?.totalRevenue || 0
+
+    const monthlyBooking = await bookings.aggregate([{
+      $group: {
+        _id: {
+          year: { $year: '$bookingDate' },
+          month: { $month: '$bookingDate' }
+        },
+        totalBookings: { $sum: 1 }
+      }
+    },
+    {
+      $sort: {
+        '_id.year': 1,
+        '_id.month': 1
+      }
+    }
+    ]).toArray()
+    res.send({
+      totalUsers,
+      totalEquipments,
+      totalBookings,
+      pendingCount,
+      completeRentals,
+      totalRevenue,
+      monthlyBooking
+    })
+  } catch (error) {
+    console.error(error)
+    res.status(500).send({ message: 'Failed to fetch analytics' })
+  }
+})
+
+
 app.get('/all-equipments', async (req, res) => {
   // console.log('query: ', req.query)
   const { category, rentalType, availability, search, minPrice, maxPrice, sort = 'recent' } = req.query

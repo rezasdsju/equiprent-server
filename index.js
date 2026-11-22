@@ -634,7 +634,10 @@ app.post('/customer/payments/checkout-verify', verifyToken, verifyCustomer, asyn
       }
 
       const updateResult = await bookings.updateOne(query, updatedDoc)
-
+      await equipments.updateOne(
+        { _id: new ObjectId(booking.equipmentId) },
+        { $inc: { availableQuantity: -booking.requiredQuantity } }
+      )
       return res.send({ result, updateResult })
     }
 

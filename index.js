@@ -633,6 +633,108 @@ app.get('/owner/my-equipments-rental', verifyToken, verifyOwner, async (req, res
   }
 })
 
+app.patch('/owner/my-equipments-rental/:id', verifyToken, verifyOwner, async (req, res) => {
+  const id = req.params.id
+  const { bookingStatus } = req.body
+  const allowedStatuses = ['confirmed', 'cancelled', 'completed']
+
+  if (!allowedStatuses.includes(bookingStatus)) {
+    return res.status(400).send({ message: 'Invalid booking status' })
+  }
+
+  if (!ObjectId.isValid(id)) {
+    return res.status(400).send({ message: 'Invalid booking ID' })
+  }
+
+  const bookingQuery = {
+    _id: new ObjectId(id),
+    'owner._id': req.user._id
+  }
+
+  const session = client.startSession()
+  let failure = null
+
+  try {
+    await session.withTransaction(async () => {
+      failure = null
+
+      const booking = await bookings.findOne(bookingQuery, { session })
+
+      if (!booking) {
+        failure = { status: 404, message: 'Booking not found' }
+        return
+      }
+
+      if (booking.bookingStatus === 'cancelled' || booking.bookingStatus === 'completed') {
+        failure = { status: 400, message: 'Booking is already cancelled or completed' }
+        return
+      }
+
+      if (bookingStatus === 'confirmed' && booking.bookingStatus !== 'pending') {
+        failure = { status: 400, message: 'Only pending bookings can be confirmed' }
+        return
+      }
+
+      if (bookingStatus === 'completed') {
+        if (booking.bookingStatus !== 'confirmed') {
+          failure = { status: 400, message: 'Only confirmed bookings can be completed' }
+          return
+        }
+
+        if (booking.paymentStatus !== 'paid') {
+          failure = { status: 400, message: 'Only paid bookings can be completed' }
+          return
+        }
+      }
+
+      const updateQuery = {
+        ...bookingQuery,
+        bookingStatus: booking.bookingStatus
+      }
+
+      if (bookingStatus === 'completed') {
+        updateQuery.paymentStatus = 'paid'
+      }
+
+      const result = await bookings.updateOne(
+        updateQuery,
+        { $set: { bookingStatus } },
+        { session }
+      )
+
+      if (result.modifiedCount !== 1) {
+        failure = { status: 409, message: 'Booking status has already changed' }
+        return
+      }
+
+      if (bookingStatus === 'completed') {
+        const stockResult = await equipments.updateOne(
+          { _id: new ObjectId(booking.equipmentId) },
+          {
+            $inc: { availableQuantity: booking.requiredQuantity },
+            $set: { availability: 'Available' }
+          },
+          { session }
+        )
+
+        if (stockResult.matchedCount !== 1) {
+          throw new Error('Equipment not found while restoring stock')
+        }
+      }
+    })
+
+    if (failure) {
+      return res.status(failure.status).send({ message: failure.message })
+    }
+
+    return res.send({ message: 'Booking status updated successfully' })
+  } catch (error) {
+    console.error('Owner booking status update error:', error)
+    return res.status(500).send({ message: 'Failed to update booking status' })
+  } finally {
+    await session.endSession()
+  }
+})
 
 app.get('/owner/analytics', verifyToken, verifyOwner, async (req, res) => {
   try {

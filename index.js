@@ -90,18 +90,27 @@ const verifyRenter = (req, res, next) => {
 }
 
 
-
 app.post('/jwt', async (req, res) => {
-  const { email } = req.body
-  const user = await users.findOne({ email })
-  if (!user) return res.status(404).send({ message: 'User not found' })
+  try {
+    if (req.headers['x-internal-key'] !== process.env.INTERNAL_API_KEY) {
+      return res.status(403).send({ message: 'Forbidden access' })
+    }
 
-  const token = jwt.sign(
-    { email: user.email, role: user.role },
-    process.env.JWT_SECRET,
-    { expiresIn: '7d' }
-  )
-  res.send({ token })
+    const { email } = req.body
+    if (!email) return res.status(400).send({ message: 'Email is required' })
+
+    const user = await users.findOne({ email })
+    if (!user) return res.status(404).send({ message: 'User not found' })
+
+    const token = jwt.sign(
+      { email: user.email, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' }
+    )
+    res.send({ token })
+  } catch (error) {
+    res.status(500).send({ message: 'Server error' })
+  }
 })
 
 app.get('/all-equipments', async (req, res) => {

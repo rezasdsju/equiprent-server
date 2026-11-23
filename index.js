@@ -33,6 +33,7 @@ const sessions = database.collection('session')
 const users = database.collection('user')
 const bookings = database.collection('bookings')
 const payments = database.collection('payments')
+await payments.createIndex({ sessionId: 1 }, { unique: true }, {})
 const favourites = database.collection('favourites')
 
 
@@ -613,7 +614,7 @@ app.get('/owner/analytics', verifyToken, verifyOwner, async (req, res) => {
     })
     const completedRentals = await bookings.countDocuments({
       'owner._id': req.user._id,
-      bookingStatus: 'confirmed'
+      bookingStatus: 'completed'
     })
     const earningResult = await payments.aggregate([
       {
@@ -845,28 +846,37 @@ app.post('/customer/payments/checkout-verify', verifyToken, verifyCustomer, asyn
         currency
       }
 
-      const resultToUpdateBookingData = await equipments.updateOne(
+
+      let result
+      try {
+        result = await payments.insertOne(payment)
+      } catch (err) {
+        if (err.code === 11000) {
+          return res.send({ message: 'Payment already verified' })
+        }
+        throw err
+      }
+
+      const updatedDoc = {
+        $set: {
+          paymentStatus: 'paid',
+          bookingStatus: 'completed'
+        }
+      }
+
+      const updateResult = await bookings.updateOne(query, updatedDoc)
+
+
+      const stockResult = await equipments.updateOne(
         {
           _id: new ObjectId(booking.equipmentId),
           availableQuantity: { $gte: booking.requiredQuantity }
         },
         { $inc: { availableQuantity: -booking.requiredQuantity } }
       )
-      if (resultToUpdateBookingData.modifiedCount === 0) {
-        return res.status(400).send({ message: 'Not enough stock' })
+      if (stockResult.modifiedCount === 0) {
+        console.error('Stock update failed for booking', metadata.bookingId)
       }
-
-      const result = await payments.insertOne(payment)
-
-      const updatedDoc = {
-        $set: {
-          paymentStatus: 'paid',
-          bookingStatus: 'confirmed'
-        }
-      }
-
-      const updateResult = await bookings.updateOne(query, updatedDoc)
-
       const updatedEquipment = await equipments.findOne({
         _id: new ObjectId(booking.equipmentId)
       })
@@ -884,6 +894,7 @@ app.post('/customer/payments/checkout-verify', verifyToken, verifyCustomer, asyn
 
     return res.status(400).send({ message: 'Payment not completed' })
   } catch (error) {
+    console.error(error)
     return res.status(500).send({ message: 'Payment verification failed' })
   }
 })

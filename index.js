@@ -2,6 +2,8 @@ import express from 'express';
 import 'dotenv/config';
 import cors from 'cors'
 import Stripe from 'stripe'
+import jwt from 'jsonwebtoken'
+
 const app = express();
 app.use(cors())
 app.use(express.json())
@@ -46,32 +48,15 @@ const favourites = database.collection('favourites')
 const verifyToken = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization
-    if (!authHeader) {
-      res.status(401).send({ message: 'Unauthorized access' })
-      return
+    if (!authHeader?.startsWith('Bearer ')) {
+      return res.status(401).send({ message: 'Unauthorized access' })
     }
     const token = authHeader.split(' ')[1]
-    if (!token) {
-      res.status(401).send({ message: 'Unauthorized access' })
-      return
-    }
-    const query = { token }
-    const session = await sessions.findOne(query)
-    if (!session) {
-      res.status(401).send({ message: 'Unauthorized access' })
-      return
-    }
-    if (session.expiresAt && new Date(session.expiresAt) < new Date()) {
-      res.status(401).send({ message: 'Session expired' })
-      return
-    }
-    const userId = session.userId
-    const userQuery = { _id: new ObjectId(userId) }
-    const user = await users.findOne(userQuery)
-    if (!user) {
-      res.status(401).send({ message: 'Unauthorized access' })
-      return
-    }
+    const decoded = jwt.verify(token, process.env.JWT_SECRET)
+
+    const user = await users.findOne({ email: decoded.email })
+    if (!user) return res.status(401).send({ message: 'Unauthorized access' })
+
     req.user = user
     next()
   } catch (error) {
@@ -96,7 +81,7 @@ const verifyOwner = (req, res, next) => {
   next()
 }
 
-const verifyCustomer = (req, res, next) => {
+const verifyRenter = (req, res, next) => {
   if (req.user?.role !== 'customer') {
     res.status(403).send({ message: 'Forbidden access' })
     return
@@ -104,6 +89,20 @@ const verifyCustomer = (req, res, next) => {
   next()
 }
 
+
+
+app.post('/jwt', async (req, res) => {
+  const { email } = req.body
+  const user = await users.findOne({ email })
+  if (!user) return res.status(404).send({ message: 'User not found' })
+
+  const token = jwt.sign(
+    { email: user.email, role: user.role },
+    process.env.JWT_SECRET,
+    { expiresIn: '7d' }
+  )
+  res.send({ token })
+})
 
 app.get('/all-equipments', async (req, res) => {
   // console.log('query: ', req.query)
@@ -752,7 +751,7 @@ app.get('/owner/analytics', verifyToken, verifyOwner, async (req, res) => {
 
 
 
-app.post('/customer/bookings', verifyToken, verifyCustomer, async (req, res) => {
+app.post('/customer/bookings', verifyToken, verifyRenter, async (req, res) => {
   const { equipmentId, startDate, endDate, requiredQuantity, contactNumber, deliveryAddress, additionalNotes } = req.body
   if (!startDate || !endDate || !requiredQuantity || !contactNumber || !deliveryAddress) {
     return res.status(400).send({ message: "Please provide all required booking information" });
@@ -849,7 +848,7 @@ app.post('/customer/bookings', verifyToken, verifyCustomer, async (req, res) => 
     return res.status(500).send({ message: "Failed to create booking" });
   }
 })
-app.get('/customer/bookings', verifyToken, verifyCustomer, async (req, res) => {
+app.get('/customer/bookings', verifyToken, verifyRenter, async (req, res) => {
   try {
     const query = {
       'customer._id': req.user._id
@@ -867,7 +866,7 @@ app.get('/customer/bookings', verifyToken, verifyCustomer, async (req, res) => {
   }
 })
 
-app.delete('/customer/bookings/:id', verifyToken, verifyCustomer, async (req, res) => {
+app.delete('/customer/bookings/:id', verifyToken, verifyRenter, async (req, res) => {
   const id = req.params.id
 
   try {
@@ -894,7 +893,7 @@ app.delete('/customer/bookings/:id', verifyToken, verifyCustomer, async (req, re
   }
 })
 
-app.get('/customer/bookings/:id', verifyToken, verifyCustomer, async (req, res) => {
+app.get('/customer/bookings/:id', verifyToken, verifyRenter, async (req, res) => {
   const id = req.params.id
   if (!ObjectId.isValid(id)) {
     return res.status(400).send({ message: 'Invalid booking ID' })
@@ -924,7 +923,7 @@ app.get('/customer/bookings/:id', verifyToken, verifyCustomer, async (req, res) 
 
 
 
-app.post('/customer/payments/checkout-verify', verifyToken, verifyCustomer, async (req, res) => {
+app.post('/customer/payments/checkout-verify', verifyToken, verifyRenter, async (req, res) => {
   const { sessionId } = req.body
 
   if (!sessionId) {
@@ -1038,7 +1037,7 @@ app.post('/customer/payments/checkout-verify', verifyToken, verifyCustomer, asyn
 
 
 
-app.post('/customer/favourites', verifyToken, verifyCustomer, async (req, res) => {
+app.post('/customer/favourites', verifyToken, verifyRenter, async (req, res) => {
   const { equipmentId } = req.body
   if (!ObjectId.isValid(equipmentId)) {
     return res.status(400).send({ message: 'Invalid equipment ID' })
@@ -1072,7 +1071,7 @@ app.post('/customer/favourites', verifyToken, verifyCustomer, async (req, res) =
   }
 })
 
-app.get('/customer/favourites/:id', verifyToken, verifyCustomer, async (req, res) => {
+app.get('/customer/favourites/:id', verifyToken, verifyRenter, async (req, res) => {
   const id = req.params.id
   if (!ObjectId.isValid(req.params.id)) {
     return res.status(400).send({ message: 'Invalid equipment ID' })
@@ -1085,7 +1084,7 @@ app.get('/customer/favourites/:id', verifyToken, verifyCustomer, async (req, res
   res.json(result)
 })
 
-app.delete('/customer/favourites/:id', verifyToken, verifyCustomer, async (req, res) => {
+app.delete('/customer/favourites/:id', verifyToken, verifyRenter, async (req, res) => {
   const id = req.params.id
   if (!ObjectId.isValid(req.params.id)) {
     return res.status(400).send({ message: 'Invalid equipment ID' })
@@ -1098,7 +1097,7 @@ app.delete('/customer/favourites/:id', verifyToken, verifyCustomer, async (req, 
   res.send(result)
 })
 
-app.get('/customer/favourites', verifyToken, verifyCustomer, async (req, res) => {
+app.get('/customer/favourites', verifyToken, verifyRenter, async (req, res) => {
   try {
     const result = await favourites.aggregate([
       {
@@ -1130,7 +1129,7 @@ app.get('/customer/favourites', verifyToken, verifyCustomer, async (req, res) =>
   }
 })
 
-app.get('/customer/rental', verifyToken, verifyCustomer, async (req, res) => {
+app.get('/customer/rental', verifyToken, verifyRenter, async (req, res) => {
   const query = {
     'customer._id': req.user._id
   }

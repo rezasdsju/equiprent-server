@@ -374,6 +374,11 @@ app.get('/admin/rentals', verifyToken, verifyAdmin, async (req, res) => {
 app.patch('/admin/rentals/:id', verifyToken, verifyAdmin, async (req, res) => {
   const id = req.params.id
   const { bookingStatus } = req.body
+  const allowedStatuses = ['pending', 'confirmed', 'cancelled', 'completed']
+
+  if (!allowedStatuses.includes(bookingStatus)) {
+    return res.status(400).send({ message: 'Invalid booking status' })
+  }
 
   try {
     if (!ObjectId.isValid(id)) {
@@ -390,6 +395,18 @@ app.patch('/admin/rentals/:id', verifyToken, verifyAdmin, async (req, res) => {
       return res.status(404).send({ message: 'Booking not found' })
     }
 
+    if (booking.bookingStatus === 'cancelled' || booking.bookingStatus === 'completed') {
+      return res.status(400).send({ message: 'Booking status cannot be changed after completion or cancellation' })
+    }
+
+    if (bookingStatus === 'completed' && booking.bookingStatus !== 'confirmed') {
+      return res.status(400).send({ message: 'Only confirmed bookings can be completed' })
+    }
+
+    if (bookingStatus === 'confirmed' && booking.bookingStatus !== 'pending') {
+      return res.status(400).send({ message: 'Only pending bookings can be confirmed' })
+    }
+
     const updatedDoc = {
       $set: {
         bookingStatus: bookingStatus
@@ -397,6 +414,16 @@ app.patch('/admin/rentals/:id', verifyToken, verifyAdmin, async (req, res) => {
     }
 
     const result = await bookings.updateOne(query, updatedDoc)
+
+    if (bookingStatus === 'completed' && booking.paymentStatus === 'paid') {
+      await equipments.updateOne(
+        { _id: new ObjectId(booking.equipmentId) },
+        {
+          $inc: { availableQuantity: booking.requiredQuantity },
+          $set: { availability: 'Available' }
+        }
+      )
+    }
 
     res.send({ message: 'Booking status updated successfully' })
   } catch (error) {
@@ -860,7 +887,7 @@ app.post('/customer/payments/checkout-verify', verifyToken, verifyCustomer, asyn
       const updatedDoc = {
         $set: {
           paymentStatus: 'paid',
-          bookingStatus: 'completed'
+          bookingStatus: 'confirmed'
         }
       }
 

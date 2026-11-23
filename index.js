@@ -648,7 +648,6 @@ app.patch('/owner/my-equipments-rental/:id', verifyToken, verifyOwner, async (re
   if (!allowedStatuses.includes(bookingStatus)) {
     return res.status(400).send({ message: 'Invalid booking status' })
   }
-
   if (!ObjectId.isValid(id)) {
     return res.status(400).send({ message: 'Invalid booking ID' })
   }
@@ -658,90 +657,49 @@ app.patch('/owner/my-equipments-rental/:id', verifyToken, verifyOwner, async (re
     'owner._id': req.user._id
   }
 
-  const session = client.startSession()
-  let failure = null
-
   try {
-    await session.withTransaction(async () => {
-      failure = null
+    const booking = await bookings.findOne(bookingQuery)
 
-      const booking = await bookings.findOne(bookingQuery, { session })
+    if (!booking) {
+      return res.status(404).send({ message: 'Booking not found' })
+    }
 
-      if (!booking) {
-        failure = { status: 404, message: 'Booking not found' }
-        return
+    if (booking.bookingStatus === 'cancelled' || booking.bookingStatus === 'completed') {
+      return res.status(400).send({ message: 'Booking is already cancelled or completed' })
+    }
+
+    if (bookingStatus === 'confirmed' && booking.bookingStatus !== 'pending') {
+      return res.status(400).send({ message: 'Only pending bookings can be confirmed' })
+    }
+
+    if (bookingStatus === 'completed') {
+      if (booking.bookingStatus !== 'confirmed') {
+        return res.status(400).send({ message: 'Only confirmed bookings can be completed' })
       }
-
-      if (booking.bookingStatus === 'cancelled' || booking.bookingStatus === 'completed') {
-        failure = { status: 400, message: 'Booking is already cancelled or completed' }
-        return
+      if (booking.paymentStatus !== 'paid') {
+        return res.status(400).send({ message: 'Only paid bookings can be completed' })
       }
+    }
 
-      if (bookingStatus === 'confirmed' && booking.bookingStatus !== 'pending') {
-        failure = { status: 400, message: 'Only pending bookings can be confirmed' }
-        return
-      }
+    await bookings.updateOne(bookingQuery, { $set: { bookingStatus } })
 
-      if (bookingStatus === 'completed') {
-        if (booking.bookingStatus !== 'confirmed') {
-          failure = { status: 400, message: 'Only confirmed bookings can be completed' }
-          return
+    if (bookingStatus === 'completed') {
+      await equipments.updateOne(
+        { _id: new ObjectId(booking.equipmentId) },
+        {
+          $inc: { availableQuantity: booking.requiredQuantity },
+          $set: { availability: 'Available' }
         }
-
-        if (booking.paymentStatus !== 'paid') {
-          failure = { status: 400, message: 'Only paid bookings can be completed' }
-          return
-        }
-      }
-
-      const updateQuery = {
-        ...bookingQuery,
-        bookingStatus: booking.bookingStatus
-      }
-
-      if (bookingStatus === 'completed') {
-        updateQuery.paymentStatus = 'paid'
-      }
-
-      const result = await bookings.updateOne(
-        updateQuery,
-        { $set: { bookingStatus } },
-        { session }
       )
-
-      if (result.modifiedCount !== 1) {
-        failure = { status: 409, message: 'Booking status has already changed' }
-        return
-      }
-
-      if (bookingStatus === 'completed') {
-        const stockResult = await equipments.updateOne(
-          { _id: new ObjectId(booking.equipmentId) },
-          {
-            $inc: { availableQuantity: booking.requiredQuantity },
-            $set: { availability: 'Available' }
-          },
-          { session }
-        )
-
-        if (stockResult.matchedCount !== 1) {
-          throw new Error('Equipment not found while restoring stock')
-        }
-      }
-    })
-
-    if (failure) {
-      return res.status(failure.status).send({ message: failure.message })
     }
 
     return res.send({ message: 'Booking status updated successfully' })
   } catch (error) {
     console.error('Owner booking status update error:', error)
     return res.status(500).send({ message: 'Failed to update booking status' })
-  } finally {
-    await session.endSession()
   }
 })
+
 
 app.get('/owner/analytics', verifyToken, verifyOwner, async (req, res) => {
   try {

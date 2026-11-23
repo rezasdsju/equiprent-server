@@ -311,6 +311,13 @@ app.patch('/admin/users/:id', verifyToken, verifyAdmin, async (req, res) => {
     return res.status(400).send({ message: 'You cannot change your own role' })
   }
   try {
+    const targetUser = await users.findOne({ _id: new ObjectId(id) })
+    if (!targetUser) {
+      return res.status(404).send({ message: 'User not found' })
+    }
+    if (targetUser.role === 'admin') {
+      return res.status(403).send({ message: "Cannot change another admin's role" })
+    }
     const result = await users.updateOne(query, {
       $set: { role: newRole }
     })

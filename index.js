@@ -490,6 +490,7 @@ app.post('/owner/add-equipment', verifyToken, verifyOwner, async (req, res) => {
       message: 'Invalid rental type'
     })
   }
+  const availability = availableQuantity > 0 ? "Available" : "Unavailable"
   const equipmentToInsert = {
     name,
     description,
@@ -498,6 +499,7 @@ app.post('/owner/add-equipment', verifyToken, verifyOwner, async (req, res) => {
     rentalPrice,
     rentalType,
     availableQuantity,
+    availability,
     condition,
     brand,
     model,
@@ -843,6 +845,17 @@ app.post('/customer/payments/checkout-verify', verifyToken, verifyCustomer, asyn
         currency
       }
 
+      const resultToUpdateBookingData = await equipments.updateOne(
+        {
+          _id: new ObjectId(booking.equipmentId),
+          availableQuantity: { $gte: booking.requiredQuantity }
+        },
+        { $inc: { availableQuantity: -booking.requiredQuantity } }
+      )
+      if (resultToUpdateBookingData.modifiedCount === 0) {
+        return res.status(400).send({ message: 'Not enough stock' })
+      }
+
       const result = await payments.insertOne(payment)
 
       const updatedDoc = {
@@ -853,10 +866,19 @@ app.post('/customer/payments/checkout-verify', verifyToken, verifyCustomer, asyn
       }
 
       const updateResult = await bookings.updateOne(query, updatedDoc)
-      await equipments.updateOne(
-        { _id: new ObjectId(booking.equipmentId) },
-        { $inc: { availableQuantity: -booking.requiredQuantity } }
-      )
+
+      const updatedEquipment = await equipments.findOne({
+        _id: new ObjectId(booking.equipmentId)
+      })
+      if (updatedEquipment && updatedEquipment.availableQuantity <= 0) {
+        await equipments.updateOne(
+          {
+            _id: new ObjectId(booking.equipmentId)
+          }, {
+          $set: { availability: 'Unavailable' }
+        }
+        )
+      }
       return res.send({ result, updateResult })
     }
 

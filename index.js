@@ -867,6 +867,33 @@ app.get('/customer/bookings', verifyToken, verifyCustomer, async (req, res) => {
   }
 })
 
+app.delete('/customer/bookings/:id', verifyToken, verifyCustomer, async (req, res) => {
+  const id = req.params.id
+
+  try {
+    if (!ObjectId.isValid(id)) {
+      return res.status(400).send({ message: 'Invalid booking ID' })
+    }
+
+    const query = {
+      _id: new ObjectId(id),
+      'customer._id': req.user._id
+    }
+
+    const result = await bookings.deleteOne(query)
+
+    if (result.deletedCount === 0) {
+      return res.status(404).send({ message: 'Booking not found' })
+    }
+
+    res.send({ message: 'Booking deleted successfully' })
+
+  } catch (error) {
+    console.error(error)
+    res.status(500).send({ message: 'Failed to delete booking' })
+  }
+})
+
 app.get('/customer/bookings/:id', verifyToken, verifyCustomer, async (req, res) => {
   const id = req.params.id
   if (!ObjectId.isValid(id)) {

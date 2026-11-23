@@ -751,8 +751,8 @@ app.get('/owner/analytics', verifyToken, verifyOwner, async (req, res) => {
 })
 
 
-// Draft booking
-app.post('/customer/bookings/draft', verifyToken, verifyCustomer, async (req, res) => {
+
+app.post('/customer/bookings', verifyToken, verifyCustomer, async (req, res) => {
   const { equipmentId, startDate, endDate, requiredQuantity, contactNumber, deliveryAddress, additionalNotes } = req.body
   if (!startDate || !endDate || !requiredQuantity || !contactNumber || !deliveryAddress) {
     return res.status(400).send({ message: "Please provide all required booking information" });
@@ -849,9 +849,25 @@ app.post('/customer/bookings/draft', verifyToken, verifyCustomer, async (req, re
     return res.status(500).send({ message: "Failed to create booking" });
   }
 })
+app.get('/customer/bookings', verifyToken, verifyCustomer, async (req, res) => {
+  try {
+    const query = {
+      'customer._id': req.user._id
+    }
 
-// Get draft booking
-app.get('/customer/bookings/draft/:id', verifyToken, verifyCustomer, async (req, res) => {
+    const result = await bookings
+      .find(query)
+      .sort({ bookingDate: -1 })
+      .toArray()
+
+    res.send(result)
+  } catch (error) {
+    console.error(error)
+    res.status(500).send({ message: 'Failed to fetch customer bookings' })
+  }
+})
+
+app.get('/customer/bookings/:id', verifyToken, verifyCustomer, async (req, res) => {
   const id = req.params.id
   if (!ObjectId.isValid(id)) {
     return res.status(400).send({ message: 'Invalid booking ID' })
